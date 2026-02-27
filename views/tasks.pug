@@ -17,12 +17,12 @@ block main
                             if task.completed
                                 form.uncomplete-form(action=`/tasks/uncomplete/${task.id}` method="POST" style="display:inline")
                                     button.btn.btn-primary.uncomplete-button(type="submit")
-                                        i(class="bi bi-circle")
+                                        i(class="bi bi-square")
                                         span Desmarcar
                             else
                                 form.complete-form(action=`/tasks/complete/${task.id}` method="POST" style="display:inline")
                                     button.btn.btn-primary.complete-button(type="submit")
-                                        i(class="bi bi-check2-circle")
+                                        i(class="bi bi-check2-square")
                                         span Completar
                             form.delete-form(action=`/tasks/delete/${task.id}` method="POST" style="display:inline")
                                 button.btn.btn-primary.delete-button(type="submit")

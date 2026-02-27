@@ -15,8 +15,8 @@ block lobby-panel
 
     div.lobby-wrapper.panel#lobbyPanel
         h2.lobby-title.flicker1 Lobby
-        div.room-options
-            div.room-create
+        div.room-actions#createRoomActions
+            div.room-options
                 label.private-room
                     span Priv
                     input#private-room(type="checkbox")
@@ -34,11 +34,18 @@ block lobby-panel
                     option(value="texture-2") Txt2
                     option(value="texture-3") Txt3
 
-            //- Crear sala POST con room options seleccionados
-            button.btn.btn-primary.w-100(type="button") Crear sala
+            //- Crear sala con las room options seleccionados
+            button.btn.btn-primary.w-100(type="button")
+                i(class="bi bi-plus-square")
+                span Crear sala
+        
+        div.room-actions.room-join-by-id
+            input.form-group.form-control#roomIdJoin(type="text" placeholder="ID de Sala" maxlength="6")
+            button.btn.btn-primary#joinByIdBtn(type="button")
+                i(class="bi bi-box-arrow-in-right")
 
-            div.room-join-by-id
-            div.room-list
+        div.room-list
+            
 
 block main
     div.overlay#overlay
