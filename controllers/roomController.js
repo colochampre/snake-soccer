@@ -1,9 +1,17 @@
 import crypto from "crypto";
 
 const rooms = new Map();
+let io = null;
 
 function generateRoomId() {
     return crypto.randomBytes(3).toString('hex');
+}
+
+function broadcastRoomList() {
+    if (io) {
+        const allRooms = roomController.getAllRooms();
+        io.emit('rooms-updated', allRooms);
+    }
 }
 
 const roomController = {
@@ -22,6 +30,7 @@ const roomController = {
                 gameState: null
             };
             rooms.set(roomId, roomData);
+            broadcastRoomList();
             res.redirect(`/room/${roomId}`);
         } catch (error) {
             error.c500(req, res, error);
@@ -72,6 +81,27 @@ const roomController = {
             room.gameState = gameState;
             rooms.set(roomId, room);
         }
+    },
+
+    getAllRooms: () => {
+        const allRooms = [];
+        rooms.forEach((room, id) => {
+            if (!room.private) {
+                allRooms.push({
+                    id: room.id,
+                    mode: room.mode,
+                    duration: room.duration,
+                    ball: room.ball,
+                    playerCount: room.players.length,
+                    createdAt: room.createdAt
+                });
+            }
+        });
+        return allRooms;
+    },
+
+    setIO: (ioInstance) => {
+        io = ioInstance;
     }
 }
 

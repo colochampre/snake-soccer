@@ -45,8 +45,6 @@
 }
 
 #players-container {
-    min-height: 200px;
-    max-height: 250px;
     padding: 0.5rem;
     overflow-y: auto;
 }

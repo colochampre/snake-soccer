@@ -1,8 +1,15 @@
 import roomController from "../../controllers/roomController.js";
 
 export function setupRoomSocket(io) {
+    function broadcastRoomList() {
+        const rooms = roomController.getAllRooms();
+        io.emit('rooms-updated', rooms);
+    }
+
     io.on('connection', (socket) => {
         console.log('Usuario conectado:', socket.id);
+
+        socket.emit('rooms-updated', roomController.getAllRooms());
 
         socket.on('join-room', ({ roomId, username }) => {
             const room = roomController.getRoomData(roomId);
@@ -26,6 +33,8 @@ export function setupRoomSocket(io) {
             socket.emit('room-joined', { player, players: room.players, room });
             socket.to(roomId).emit('player-joined', { username: player.username, players: room.players });
 
+            broadcastRoomList();
+
             console.log(`${player.username} se unió a la sala ${roomId}`);
         });
 
@@ -44,6 +53,8 @@ export function setupRoomSocket(io) {
                         roomController.deleteRoom(roomId);
                         console.log(`Sala ${roomId} eliminada (sin jugadores)`);
                     }
+
+                    broadcastRoomList();
                 }
             }
             socket.leave(roomId);
@@ -74,6 +85,8 @@ export function setupRoomSocket(io) {
                         if (room.players.length === 0) {
                             roomController.deleteRoom(roomId);
                         }
+
+                        broadcastRoomList();
                     }
                 }
             });
