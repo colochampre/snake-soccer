@@ -13,7 +13,7 @@ import authRouter from "./routes/authRouter.js";
 import taskRouter from "./routes/taskRouter.js";
 import roomRouter from "./routes/roomRouter.js";
 import roomController from "./controllers/roomController.js";
-import { setupRoomSocket } from "./public/js/roomSocket.js";
+import { setupRoomSocket } from "./public/js/sockets.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
