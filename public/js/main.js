@@ -51,6 +51,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Ready button functionality - close lobby panel
+    const readyBtn = document.getElementById('ready');
+    if (readyBtn && lobbyPanel) {
+        readyBtn.addEventListener('click', () => {
+            lobbyPanel.classList.remove('open');
+            overlay.classList.remove('active');
+        });
+    }
+
     // Back button functionality
     document.querySelectorAll('.history-back').forEach(btn => {
         btn.addEventListener('click', (e) => {

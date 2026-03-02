@@ -265,10 +265,22 @@ h6 {
     margin-right: 0.5rem;
 }
 
+.room-list {
+    margin-bottom: 1.8rem;
+}
+
 .room-list h3 {
     padding-bottom: 0.5rem;
     margin-bottom: 1.8rem;
     border-bottom: 2px solid var(--main-color);
+}
+
+.room-list #rooms {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .room-list p {
@@ -561,7 +573,7 @@ h6 {
         padding-top: 5.5rem;
         position: fixed;
         top: 0.5rem;
-        overflow-y: hidden;
+        overflow-y: auto;
         transform: translateX(-105%);
         transition: transform 0.3s ease;
         z-index: 999;
