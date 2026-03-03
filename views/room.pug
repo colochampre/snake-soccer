@@ -15,13 +15,13 @@ block lobby-panel
             button.btn.btn-primary.w-100#ready(type="button")
                 i.bi.bi-check-square
                 span Listo
-            button.btn.btn-primary.w-100.leave-btn#leave-room(type="button")
+            button.btn.btn-primary.w-100.leave-btn#leaveRoom(type="button")
                 i.bi.bi-door-closed
                 span Salir
         
         div.players-list
             h3.text-center Jugadores
-            div#players-container
+            div#playersContainer
                 p.text-center Esperando jugadores...
 
 block main
@@ -48,18 +48,18 @@ block user-panel
         div.game-controls
 
             div.control-set
-                i.bi.bi-caret-up-square
+                i.bi.bi-caret-up-square#keyUp
                 div
-                    i.bi.bi-caret-left-square 
-                    i.bi.bi-caret-down-square 
-                    i.bi.bi-caret-right-square 
+                    i.bi.bi-caret-left-square#keyLeft 
+                    i.bi.bi-caret-down-square#keyDown 
+                    i.bi.bi-caret-right-square#keyRight 
 
             div.control-set
-                span.key.key-w W
+                span.key.key-w#keyW W
                 div
-                    span.key.key-a A
-                    span.key.key-s S
-                    span.key.key-d D
+                    span.key.key-a#keyA A
+                    span.key.key-s#keyS S
+                    span.key.key-d#keyD D
 
 block scripts
     script(src="/socket.io/socket.io.js")

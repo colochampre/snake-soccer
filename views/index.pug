@@ -8,17 +8,17 @@ block lobby-panel
             div.room-options
                 label.private-room
                     span Priv
-                    input#private-room(type="checkbox" name="private")
-                select#select-duration(name="duration")
+                    input#privateRoom(type="checkbox" name="private")
+                select#selectDuration(name="duration")
                     option(value="120" selected) 2m
                     option(value="300") 5m
                     option(value="600") 10m
-                select#select-mode(name="mode")
+                select#selectMode(name="mode")
                     option(value="1vs1" selected) 1v1
                     option(value="2vs2") 2v2
                     option(value="3vs3") 3v3
                     option(value="practica") Practica
-                select#select-ball(name="ball")
+                select#selectBall(name="ball")
                     option(value="texture-1" selected) Txt1
                     option(value="texture-2") Txt2
                     option(value="texture-3") Txt3
@@ -51,15 +51,20 @@ block main
 
     div.main-wrapper.panel
         h1.main-title.text-center.flicker Snake Soccer
+        div#scoreboard
+            div#score 0 - 0
+            div#timer 00:00
+        div.canvas-wrapper
+            canvas#gameCanvas
 
 block user-panel
     div.user-wrapper.panel#userPanel
         h2.user-title.flicker2 #{user.username}
         div.experience-container
             div.experience-bar-background
-                div#experience-bar-fill
+                div#xpBarFill
             p.experience-text
-                span#stat-xp 0 / 0
+                span#statXp 0 / 0
         div.nav-list
             if user && user.role === 'admin'
                 div.nav-item

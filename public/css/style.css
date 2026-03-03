@@ -12,8 +12,7 @@
     TEMA OSCURO (Default)
 ========================== */
 
-[data-theme="dark"] {
-    --title-font: 'Press Start 2P', cursive;
+[data-theme="dark"] {--title-font: 'Press Start 2P', cursive;
     --main-font: 'VCR OSD Mono', monospace;
 
     --main-color: #00ff99;

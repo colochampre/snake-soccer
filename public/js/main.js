@@ -4,6 +4,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const lobbyPanel = document.getElementById('lobbyPanel');
     const userPanel = document.getElementById('userPanel');
     const overlay = document.getElementById('overlay');
+    const keyState = {
+        w: false,
+        a: false,
+        s: false,
+        d: false,
+        arrowup: false,
+        arrowdown: false,
+        arrowleft: false,
+        arrowright: false
+    };
+
+    const keyElements = {
+        w: document.getElementById('keyW'),
+        a: document.getElementById('keyA'),
+        s: document.getElementById('keyS'),
+        d: document.getElementById('keyD'),
+        arrowup: document.getElementById('keyUp'),
+        arrowdown: document.getElementById('keyDown'),
+        arrowleft: document.getElementById('keyLeft'),
+        arrowright: document.getElementById('keyRight')
+    };
 
     // Toggle Lobby Panel
     if (lobbyToggle && lobbyPanel) {
@@ -42,12 +63,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cerrar paneles con tecla ESC
+    // Eventos cuando se presiona la tecla
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             lobbyPanel?.classList.remove('open');
             userPanel?.classList.remove('open');
             overlay?.classList.remove('active');
+        }
+
+        if (userPanel?.classList.contains('open')) {
+            if (keyState.hasOwnProperty(e.key.toLowerCase()) && !keyState[e.key.toLowerCase()]) {
+                keyElements[e.key.toLowerCase()]?.classList.add('text-white', 'border-white');
+                keyState[e.key.toLowerCase()] = true;
+            }
+        }
+    });
+
+    // Evento cuando se suelta la tecla
+    document.addEventListener('keyup', (e) => {
+        if (userPanel?.classList.contains('open')) {
+            if (keyState.hasOwnProperty(e.key.toLowerCase())) {
+                keyElements[e.key.toLowerCase()]?.classList.remove('text-white', 'border-white');
+                keyState[e.key.toLowerCase()] = false;
+            }
         }
     });
 

@@ -1,8 +1,8 @@
 const socket = io();
 
 const roomId = window.location.pathname.split('/')[2];
-const playersContainer = document.getElementById('players-container');
-const leaveRoomBtn = document.getElementById('leave-room');
+const playersContainer = document.getElementById('playersContainer');
+const leaveRoomBtn = document.getElementById('leaveRoom');
 
 let gameState = null;
 let playerData = null;
