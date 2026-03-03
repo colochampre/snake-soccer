@@ -7,6 +7,21 @@ function generateRoomId() {
     return crypto.randomBytes(3).toString('hex');
 }
 
+function getMaxPlayers(mode) {
+    switch(mode) {
+        case '1vs1':
+            return 2;
+        case '2vs2':
+            return 4;
+        case '3vs3':
+            return 6;
+        case 'practica':
+            return null;
+        default:
+            return 2;
+    }
+}
+
 function broadcastRoomList() {
     if (io) {
         const allRooms = roomController.getAllRooms();
@@ -49,6 +64,18 @@ const roomController = {
                 });
             }
             const room = rooms.get(id);
+            
+            const maxPlayers = getMaxPlayers(room.mode);
+            const existingPlayer = room.players.find(p => p.username === req.user.username);
+            
+            if (maxPlayers !== null && room.players.length >= maxPlayers && !existingPlayer) {
+                return res.status(403).render('error', {
+                    title: 'Sala llena',
+                    message: 'Esta sala ya alcanzó su capacidad máxima de jugadores.',
+                    error: { status: 403 }
+                });
+            }
+            
             res.render('room', {
                 title: `Sala ${id}`,
                 user: req.user,
@@ -93,12 +120,15 @@ const roomController = {
                     duration: room.duration,
                     ball: room.ball,
                     playerCount: room.players.length,
+                    maxPlayers: getMaxPlayers(room.mode),
                     createdAt: room.createdAt
                 });
             }
         });
         return allRooms;
     },
+
+    getMaxPlayers: getMaxPlayers,
 
     setIO: (ioInstance) => {
         io = ioInstance;

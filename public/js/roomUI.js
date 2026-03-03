@@ -28,7 +28,6 @@ socket.on('player-left', (data) => {
 
 socket.on('error', (error) => {
     console.error('Socket error:', error);
-    alert(error.message);
     if (error.redirect) {
         window.location.href = '/';
     }

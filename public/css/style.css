@@ -350,6 +350,35 @@ h6 {
     font-size: 1.2rem;
 }
 
+.room-card.room-full {
+    opacity: 0.6;
+    cursor: not-allowed;
+    border-color: var(--text-secondary);
+}
+
+.room-card.room-full:hover {
+    box-shadow: none;
+    transform: none;
+}
+
+.room-card.room-full:hover * {
+    color: inherit !important;
+}
+
+.room-card.room-full .room-card-header {
+    border-bottom-color: var(--text-secondary);
+}
+
+.room-full-badge {
+    margin-left: 0.5rem;
+    padding: 0.15rem 0.4rem;
+    background-color: var(--text-secondary);
+    border-radius: 0.15rem;
+    color: var(--bg-primary);
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
 /* ==========================
     USER PANEL
 ========================== */
@@ -493,6 +522,16 @@ h6 {
 
 .main-title {
     margin-top: .75rem;
+}
+
+#scoreboard {
+    width: 100%;
+    font-size: 1.2rem;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 4rem;
 }
 
 /* ==========================

@@ -23,7 +23,14 @@ function updateRoomList(rooms) {
 function createRoomCard(room) {
     const card = document.createElement('div');
     card.className = 'room-card';
-    card.onclick = () => window.location.href = `/room/${room.id}`;
+    
+    const isFull = room.maxPlayers && room.playerCount >= room.maxPlayers;
+    
+    if (isFull) {
+        card.classList.add('room-full');
+    } else {
+        card.onclick = () => window.location.href = `/room/${room.id}`;
+    }
     
     const header = document.createElement('div');
     header.className = 'room-card-header';
@@ -34,7 +41,12 @@ function createRoomCard(room) {
     
     const playerCount = document.createElement('span');
     playerCount.className = 'room-players';
-    playerCount.innerHTML = `<i class="bi bi-people-fill"></i> ${room.playerCount}`;
+    const maxPlayersText = room.maxPlayers ? `/${room.maxPlayers}` : '';
+    playerCount.innerHTML = `<i class="bi bi-people-fill"></i> ${room.playerCount}${maxPlayersText}`;
+    
+    if (isFull) {
+        playerCount.innerHTML += ' <span class="room-full-badge">LLENA</span>';
+    }
     
     header.appendChild(roomId);
     header.appendChild(playerCount);
@@ -44,7 +56,7 @@ function createRoomCard(room) {
     
     const mode = document.createElement('span');
     mode.className = 'room-mode';
-    mode.innerHTML = `<i class="bi bi-controller"></i> ${room.mode}`;
+    mode.innerHTML = `<i class="bi bi-joystick"></i> ${room.mode}`;
     
     const duration = document.createElement('span');
     duration.className = 'room-duration';
