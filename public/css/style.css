@@ -521,13 +521,11 @@ h6 {
 
 #scoreboard {
     width: 100%;
-    font-size: 1.2rem;
+    margin-bottom: .25rem;
     display: flex;
     flex-direction: row;
     justify-content: center;
-    align-items: end;
     gap: 4rem;
-    margin-bottom: .5rem;
 }
 
 #scoreboard * {
@@ -535,8 +533,12 @@ h6 {
     margin: 0;
 }
 
-.main-title {
+#scoreboard span {
     font-size: 1.2rem;
+}
+
+.main-title {
+    font-size: 1.1rem;
     flex-shrink: 0;
 }
 
@@ -768,6 +770,10 @@ h6 {
     .user-wrapper {
         width: 320px;
     }
+
+    .main-title {
+        font-size: 1.5rem;
+    }
 }
 
 /* ==========================
@@ -794,6 +800,7 @@ h6 {
     .main-wrapper {
         width: 100%;
         justify-content: start;
+        padding-top: 2rem;
     }
 
     .main-title {
@@ -812,7 +819,7 @@ h6 {
 
     #scoreboard {
         margin-bottom: .5rem;
-        font-size: 1.4rem;
+        font-size: 1.6rem;
         justify-content: center;
         gap: 6rem;
     }
