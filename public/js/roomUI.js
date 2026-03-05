@@ -17,6 +17,8 @@ socket.on('room-joined', (data) => {
     myPlayer = data.player;
     roomMode = data.room.mode;
     allPlayers = data.players;
+    const texturePath = BALL_TEXTURE_MAP[data.room.ball] || '/img/ball-base-1.png';
+    updateBallTexture(texturePath);
     setupLobbyUI();
     renderLobby(data.players, data.canStart);
 });
@@ -34,6 +36,23 @@ const countdownEl = document.getElementById('countdownOverlay');
 let isGameActive = false;
 let countdownHideTimer = null;
 const SEG = 20;
+
+let ballTexture = new Image();
+let ballPattern = null;
+
+function updateBallTexture(texturePath) {
+    ballTexture = new Image();
+    ballTexture.onload = function () {
+        ballPattern = ctx ? ctx.createPattern(ballTexture, 'repeat') : null;
+    };
+    ballTexture.src = texturePath;
+}
+
+const BALL_TEXTURE_MAP = {
+    'texture-1': '/img/ball-base-1.png',
+    'texture-2': '/img/ball-base-2.png',
+    'texture-3': '/img/ball-base-3.png',
+};
 
 socket.on('game-starting', (data) => {
     isGameActive = true;
@@ -106,7 +125,6 @@ function renderTeamLobby(players) {
         <div class="teams-container">
             <div class="team-col">
                 <div class="team-header t1-header">
-                    <span class="team-dot t1-dot"></span>
                     <span>Equipo A</span>
                     <span class="team-count ${team1.length >= min ? 'count-ok' : ''}">${team1.length}/${min}</span>
                 </div>
@@ -117,7 +135,6 @@ function renderTeamLobby(players) {
             <div class="teams-vs">VS</div>
             <div class="team-col">
                 <div class="team-header t2-header">
-                    <span class="team-dot t2-dot"></span>
                     <span>Equipo B</span>
                     <span class="team-count ${team2.length >= min ? 'count-ok' : ''}">${team2.length}/${min}</span>
                 </div>
@@ -343,14 +360,7 @@ function renderGame(state) {
         if (player.body && player.body.length > 0) drawSnakeOnField(player);
     }
 
-    const { x, y, size } = state.ball;
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    drawBall(state.ball);
 
     if (state.kickOff && !state.isPausedForGoal) {
         ctx.font = `bold ${Math.max(14, Math.round(W * 0.018))}px monospace`;
@@ -381,6 +391,39 @@ function renderGame(state) {
         ctx.fillText(text, W / 2, H / 2);
         ctx.textAlign = 'left';
     }
+}
+
+function drawBall(ball) {
+    if (!ball || !ball.x) return;
+    ctx.save();
+    if (ballPattern && ballTexture.width > 0 && ballTexture.height > 0) {
+        const matrix = new DOMMatrix().translate(ball.x * 1.6, ball.y * 1.6);
+        ballPattern.setTransform(matrix);
+        ctx.fillStyle = ballPattern;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        ctx.fillStyle = '#F0F0F0';
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    const gradient = ctx.createRadialGradient(
+        ball.x - ball.size * 0.3,
+        ball.y - ball.size * 0.3,
+        ball.size * 0.1,
+        ball.x,
+        ball.y,
+        ball.size
+    );
+    gradient.addColorStop(0, 'rgba(255,255,255,0.3)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.4)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 }
 
 function drawSnakeOnField(player) {

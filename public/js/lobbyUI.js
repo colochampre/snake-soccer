@@ -4,6 +4,50 @@ socket.on('rooms-updated', (rooms) => {
     updateRoomList(rooms);
 });
 
+// Ball selector functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const ballSelector = document.querySelector('.ball-selector');
+    const ballDisplay = document.querySelector('.ball-selector-display');
+    const ballDropdown = document.querySelector('.ball-selector-dropdown');
+    const ballInput = document.getElementById('selectBall');
+    const displayOption = document.querySelector('.ball-selector-display .ball-option');
+    
+    if (!ballSelector || !ballDisplay || !ballDropdown || !ballInput || !displayOption) return;
+    
+    // Toggle dropdown
+    ballDisplay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ballSelector.classList.toggle('open');
+    });
+    
+    // Select ball option from dropdown
+    const dropdownOptions = ballDropdown.querySelectorAll('.ball-option');
+    dropdownOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const selectedBall = option.getAttribute('data-ball');
+            
+            // Update hidden input
+            ballInput.value = selectedBall;
+            
+            // Update display option
+            displayOption.setAttribute('data-ball', selectedBall);
+            displayOption.className = 'ball-option ball-selected';
+            displayOption.setAttribute('data-ball', selectedBall);
+            
+            // Close dropdown
+            ballSelector.classList.remove('open');
+        });
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!ballSelector.contains(e.target)) {
+            ballSelector.classList.remove('open');
+        }
+    });
+});
+
 function updateRoomList(rooms) {
     const roomsContainer = document.getElementById('rooms');
     

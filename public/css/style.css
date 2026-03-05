@@ -268,8 +268,108 @@ h6 {
     width: auto;
     height: 100%;
     padding: 0.5rem;
-    font-size: 0.9rem;
     vertical-align: bottom;
+}
+
+.ball-selector {
+    position: relative;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--main-color);
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.ball-selector-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 0.5rem;
+    gap: 0.5rem;
+}
+
+.ball-dropdown-icon {
+    color: var(--main-color);
+    font-size: 0.9rem;
+    transition: transform 0.2s ease;
+}
+
+.ball-selector.open .ball-dropdown-icon {
+    transform: rotate(180deg);
+}
+
+.ball-selector-dropdown {
+    position: absolute;
+    top: 100%;
+    left: -1px;
+    right: -1px;
+    margin-top: 0.25rem;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--main-color);
+    border-radius: 0.25rem;
+    padding: 0.25rem;
+    display: none;
+    flex-direction: column;
+    gap: 0.25rem;
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.ball-selector.open .ball-selector-dropdown {
+    display: flex;
+}
+
+.ball-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--main-color);
+    transition: all 0.2s ease;
+    position: relative;
+    background-size: 375%;
+    background-position: left;
+    background-repeat: no-repeat;
+}
+
+.ball-option[data-ball="texture-1"] {
+    background-image: url('/img/ball-base-1.png');
+}
+
+.ball-option[data-ball="texture-2"] {
+    background-image: url('/img/ball-base-2.png');
+}
+
+.ball-option[data-ball="texture-3"] {
+    background-image: url('/img/ball-base-3.png');
+}
+
+.ball-option::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at 30% 30%,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0.1) 30%,
+        rgba(0, 0, 0, 0.1) 70%,
+        rgba(0, 0, 0, 0.4) 100%
+    );
+    pointer-events: none;
+}
+
+.ball-option:hover {
+    background-color: var(--bg-secondary);
+    transform: scale(1.1);
+    box-shadow: 0 0 8px var(--main-color);
+}
+
+.ball-option.ball-selected {
+    border-color: var(--main-color);
+    box-shadow: 0 0 10px var(--main-color);
 }
 
 .room-actions {

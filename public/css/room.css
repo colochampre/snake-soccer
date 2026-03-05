@@ -163,15 +163,6 @@
     color: var(--bg-primary) !important;
 }
 
-.all-ready {
-    animation: pulse-ready 1s ease-in-out infinite;
-}
-
-@keyframes pulse-ready {
-    0%, 100% { box-shadow: 0 0 6px var(--main-color); }
-    50% { box-shadow: 0 0 16px var(--main-color); }
-}
-
 /* ==========================
     TEAMS LAYOUT
 ========================== */
@@ -198,37 +189,28 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
 }
 
 .t1-header {
     border-color: 2px solid var(--team-a);
     color: var(--team-a);
+    white-space: nowrap;
 }
 
 .t2-header {
     border-color: 2px solid var(--team-b);
     color: var(--team-b);
+    white-space: nowrap;
 }
-
-.team-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.t1-dot { background-color: var(--team-a); }
-.t2-dot { background-color: var(--team-b); }
 
 .team-count {
     margin-left: auto;
     font-size: 1rem;
-    opacity: 0.7;
+    opacity: 0.6;
 }
 
 .team-count.count-ok {
-    color: var(--main-color);
     opacity: 1;
 }
 

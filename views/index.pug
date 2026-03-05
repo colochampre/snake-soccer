@@ -18,10 +18,15 @@ block lobby-panel
                     option(value="2vs2") 2v2
                     option(value="3vs3") 3v3
                     option(value="practica") Practica
-                select#selectBall(name="ball")
-                    option(value="texture-1" selected) Txt1
-                    option(value="texture-2") Txt2
-                    option(value="texture-3") Txt3
+                div.ball-selector
+                    input#selectBall(type="hidden" name="ball" value="texture-1")
+                    div.ball-selector-display
+                        div.ball-option.ball-selected(data-ball="texture-1")
+                        i.bi.bi-chevron-down.ball-dropdown-icon
+                    div.ball-selector-dropdown
+                        div.ball-option(data-ball="texture-1")
+                        div.ball-option(data-ball="texture-2")
+                        div.ball-option(data-ball="texture-3")
 
             button.btn.btn-primary.w-100(type="submit")
                 i.bi.bi-plus-square
