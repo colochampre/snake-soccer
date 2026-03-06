@@ -1,4 +1,4 @@
-import roomController from "../../controllers/roomController.js";
+import roomController from "../controllers/roomController.js";
 import {
     createInitialState,
     addPlayer,
@@ -6,7 +6,7 @@ import {
     startGame,
     handleDirectionChange,
     resumeAfterKickoff
-} from '../../server/gameLogic.js';
+} from './gameLogic.js';
 
 const roomIntervals = new Map();
 
