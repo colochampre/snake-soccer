@@ -24,6 +24,7 @@ function updateBallTexture(texturePath) {
 
 // --- Drawing Helpers ---
 function getTeamColorFromCSS(team) {
+    if (team && team.startsWith('#')) return team;
     const styles = getComputedStyle(document.documentElement);
     if (team === 'team1') return styles.getPropertyValue('--team-a').trim();
     if (team === 'team2') return styles.getPropertyValue('--team-b').trim();
@@ -69,10 +70,9 @@ function renderGame(state) {
     ctx.fillRect(fx, fy, fieldWidth, fieldHeight);
 
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.strokeRect(fx, fy, fieldWidth, fieldHeight);
 
-    ctx.setLineDash([12, 8]);
     ctx.beginPath();
     ctx.moveTo(W / 2, fy);
     ctx.lineTo(W / 2, fy + fieldHeight);
@@ -184,7 +184,7 @@ function drawSnakeOnField(player) {
         rrect(ctx, seg.x, seg.y, SEG, SEG, 3);
         ctx.fill();
         ctx.stroke();
-        if (isHead) {
+        /*if (isHead) {
             ctx.fillStyle = '#fff';
             ctx.beginPath();
             ctx.arc(seg.x + SEG - 5, seg.y + 5, 2.5, 0, Math.PI * 2);
@@ -195,7 +195,7 @@ function drawSnakeOnField(player) {
             ctx.arc(seg.x + SEG - 4, seg.y + 5, 1.2, 0, Math.PI * 2);
             ctx.arc(seg.x + SEG - 4, seg.y + SEG - 5, 1.2, 0, Math.PI * 2);
             ctx.fill();
-        }
+        }*/
     }
     const head = body[0];
     ctx.font = `${Math.max(9, SEG * 0.6)}px monospace`;

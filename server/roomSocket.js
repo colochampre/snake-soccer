@@ -2,6 +2,7 @@ import roomController from "../controllers/roomController.js";
 import {
     createInitialState,
     addPlayer,
+    spawnPlayer,
     removePlayer,
     startGame,
     handleDirectionChange,
@@ -49,7 +50,7 @@ function launchGame(roomId, room, io) {
 
     if (room.mode === 'practica') {
         for (const lp of room.players.filter(p => p.role === 'player')) {
-            addPlayer(gameState, lp.id, lp.username);
+            addPlayer(gameState, lp.id, lp.username, null, lp.color);
         }
     } else {
         for (const lp of room.players.filter(p => p.team === 'team1')) {
@@ -117,6 +118,19 @@ function getMaxPlayersPerTeam(mode) {
     return 1;
 }
 
+function generateVibrantColor() {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = 65 + Math.floor(Math.random() * 35);
+    const lightness = 45 + Math.floor(Math.random() * 25);
+    const h = hue / 360, s = saturation / 100, l = lightness / 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => {
+        const k = (n + h * 12) % 12;
+        return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255);
+    };
+    return '#' + [f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
 function assignTeam(room) {
     if (room.mode === 'practica') return null;
     const t1 = room.players.filter(p => p.team === 'team1').length;
@@ -162,28 +176,25 @@ export function setupRoomSocket(io) {
 
             let preservedTeam = undefined;
             let preservedRole = undefined;
+            let oldPlayerId = undefined;
             const existingIndex = room.players.findIndex(p => p.username === username);
             if (existingIndex !== -1) {
                 preservedTeam = room.players[existingIndex].team;
                 preservedRole = room.players[existingIndex].role;
+                oldPlayerId = room.players[existingIndex].id;
                 room.players.splice(existingIndex, 1);
+                
+                if (room.gameState && oldPlayerId) {
+                    removePlayer(room.gameState, oldPlayerId);
+                }
             }
 
             socket.join(roomId);
 
             const team = preservedTeam !== undefined ? preservedTeam : assignTeam(room);
-            const color = getTeamColor(team);
+            const color = room.mode === 'practica' ? generateVibrantColor() : getTeamColor(team);
             const isReady = room.mode === 'practica';
-            let role;
-            if (room.mode === 'practica') {
-                if (preservedRole !== undefined) {
-                    role = preservedRole;
-                } else {
-                    role = room.players.some(p => p.role === 'player') ? 'spectator' : 'player';
-                }
-            } else {
-                role = 'player';
-            }
+            const role = preservedRole !== undefined ? preservedRole : 'player';
             const player = { id: socket.id, username, team, color, isReady, role };
             room.players.push(player);
             roomController.updateRoomPlayers(roomId, room.players);
@@ -195,7 +206,15 @@ export function setupRoomSocket(io) {
             broadcastRoomList();
             console.log(`${player.username} se unió a la sala ${roomId} (${team || 'practica'})`);
 
-            if (canStart && !(room.gameState && !room.gameState.isGameOver)) {
+            if (room.mode === 'practica' && room.gameState && !room.gameState.isGameOver) {
+                addPlayer(room.gameState, player.id, player.username, null, player.color);
+                spawnPlayer(room.gameState, player.id);
+                socket.emit('game-starting', {
+                    canvasWidth: room.gameState.canvasWidth,
+                    canvasHeight: room.gameState.canvasHeight,
+                    mode: room.gameState.mode,
+                });
+            } else if (canStart && !(room.gameState && !room.gameState.isGameOver)) {
                 launchGame(roomId, room, io);
             }
         });
@@ -309,6 +328,25 @@ export function setupRoomSocket(io) {
                     }
                 }
             });
+        });
+
+        socket.on('restart-game', ({ roomId }) => {
+            const room = roomController.getRoomData(roomId);
+            if (!room) return;
+
+            const ri = roomIntervals.get(roomId);
+            if (ri) {
+                clearInterval(ri.game);
+                clearInterval(ri.timer);
+                roomIntervals.delete(roomId);
+            }
+
+            room.players.forEach(p => { p.isReady = false; });
+            roomController.updateRoomPlayers(roomId, room.players);
+            roomController.updateRoomGameState(roomId, null);
+
+            const canStart = canStartGame(room);
+            io.to(roomId).emit('lobby-restored', { players: room.players, canStart, teamNames: room.teamNames });
         });
 
         socket.on('set-team-name', ({ roomId, team, name }) => {

@@ -50,6 +50,17 @@ block main
         div.canvas-wrapper
             canvas#gameCanvas
             div#countdownOverlay.countdown-overlay
+            div#gameOverlay.game-over-overlay(style="display:none")
+                div.game-over-content
+                    h2.game-over-title#gameOverTitle ¡FIN!
+                    p.game-over-score#gameOverScore 0 - 0
+                    div.game-over-actions
+                        button.btn.leave-btn#gameOverLeave
+                            i.bi.bi-door-open
+                            span Salir al lobby
+                        button.btn#gameOverRestart
+                            i.bi.bi-arrow-repeat
+                            span Reiniciar
 
 block user-panel
     div.user-wrapper.panel#userPanel

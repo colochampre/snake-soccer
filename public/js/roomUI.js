@@ -49,12 +49,21 @@ socket.on('game-starting', (data) => {
     if (overlay) overlay.classList.remove('active');
 });
 
+const timerEl = document.getElementById('timer');
+
 socket.on('game-update', (state) => {
     if (!ctx) return;
     if (canvas.width !== state.canvasWidth) canvas.width = state.canvasWidth;
     if (canvas.height !== state.canvasHeight) canvas.height = state.canvasHeight;
     renderGame(state);
     updateScoreboard(state);
+    if (timerEl) {
+        if (state.timeLeft <= 10 && !state.isGameOver) {
+            timerEl.classList.add('timer-danger');
+        } else {
+            timerEl.classList.remove('timer-danger');
+        }
+    }
 });
 
 socket.on('kickoff-countdown', ({ count }) => {
@@ -69,7 +78,56 @@ socket.on('kickoff-countdown', ({ count }) => {
 
 socket.on('game-over', (data) => {
     isGameActive = false;
+    if (timerEl) timerEl.classList.remove('timer-danger');
+
+    const overlay = document.getElementById('gameOverlay');
+    const titleEl = document.getElementById('gameOverTitle');
+    const scoreEl = document.getElementById('gameOverScore');
+    if (!overlay) return;
+
+    if (titleEl) {
+        if (data.winner === 'draw') {
+            titleEl.textContent = '¡EMPATE!';
+        } else {
+            const name = teamNames[data.winner] || (data.winner === 'team1' ? 'Equipo 1' : 'Equipo 2');
+            titleEl.textContent = `¡${name.toUpperCase()} GANA!`;
+        }
+    }
+    if (scoreEl) scoreEl.textContent = `${data.score.team1} - ${data.score.team2}`;
+    overlay.style.display = 'flex';
 });
+
+socket.on('lobby-restored', (data) => {
+    isGameActive = false;
+    allPlayers = data.players;
+    const me = data.players.find(p => p.id === myPlayer?.id);
+    if (me) myPlayer = me;
+    if (data.teamNames) teamNames = data.teamNames;
+
+    const overlay = document.getElementById('gameOverlay');
+    if (overlay) overlay.style.display = 'none';
+    if (timerEl) { timerEl.textContent = '0:00'; timerEl.classList.remove('timer-danger'); }
+    const scoreDisplay = document.getElementById('score');
+    if (scoreDisplay) scoreDisplay.textContent = '0 - 0';
+
+    const lobbyPanel = document.getElementById('lobbyPanel');
+    if (lobbyPanel) lobbyPanel.classList.add('open');
+    renderLobby(data.players, data.canStart);
+});
+
+const gameOverLeaveBtn = document.getElementById('gameOverLeave');
+const gameOverRestartBtn = document.getElementById('gameOverRestart');
+if (gameOverLeaveBtn) {
+    gameOverLeaveBtn.addEventListener('click', () => {
+        socket.emit('leave-room', roomId);
+        window.location.href = '/';
+    });
+}
+if (gameOverRestartBtn) {
+    gameOverRestartBtn.addEventListener('click', () => {
+        socket.emit('restart-game', { roomId });
+    });
+}
 
 socket.on('error', (error) => {
     console.error('Socket error:', error);

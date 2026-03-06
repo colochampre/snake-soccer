@@ -414,6 +414,27 @@ function resetBall(gameState) {
     });
 }
 
+function spawnPlayer(gameState, playerId) {
+    const player = gameState.players[playerId];
+    if (!player) return;
+
+    const totalPlayers = Object.keys(gameState.players).length;
+    const snakeLength = Math.min(8, Math.max(1, Math.round(24 / totalPlayers)));
+
+    const isTeam1 = gameState.teams.team1.includes(playerId);
+    const teamPlayers = isTeam1 ? gameState.teams.team1 : gameState.teams.team2;
+    const playerIndex = teamPlayers.indexOf(playerId);
+    const numPlayersOnTeam = teamPlayers.length;
+    const yPos = (gameState.canvasHeight / (numPlayersOnTeam + 1)) * (playerIndex + 1);
+
+    player.body = [{
+        x: isTeam1 ? 100 : gameState.canvasWidth - 100 - SNAKE_SIZE,
+        y: yPos
+    }];
+    player.direction = 'stop';
+    player.length = snakeLength;
+}
+
 function handleDirectionChange(gameState, playerId, direction) {
     const player = gameState.players[playerId];
     if (!player) return;
@@ -472,6 +493,7 @@ function resumeAfterKickoff(gameState) {
 export {
     createInitialState,
     addPlayer,
+    spawnPlayer,
     removePlayer,
     startGame,
     endGame,
