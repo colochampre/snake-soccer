@@ -370,16 +370,15 @@ function handleGoal(gameState, scoringTeam, onUpdate, onGoalScored) {
 
     // After a pause, reset positions and start the kickoff countdown
     setTimeout(() => {
-        // Clear the goal message now that the countdown is about to start
-        gameState.goalScoredBy = null;
-        resetBall(gameState); // Reset positions 
-        onUpdate(gameState); // Send updated positions to clients
+        const savedScoringTeam = gameState.goalScoredBy; // preserve for countdown display
+        resetBall(gameState); // resets positions (also clears goalScoredBy internally)
+        gameState.goalScoredBy = savedScoringTeam; // restore so announcement stays visible
+        onUpdate(gameState);
 
-        // Notify server to start the kickoff countdown
         if (onGoalScored) {
             onGoalScored();
         }
-    }, 2000); // 2-second pause for the goal message
+    }, 2000);
 }
 
 function resetBall(gameState) {
@@ -499,5 +498,6 @@ export {
     endGame,
     handleDirectionChange,
     resumeAfterKickoff,
+    resetBall,
     createGameState
 };

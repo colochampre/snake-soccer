@@ -390,18 +390,66 @@
     margin: 0;
 }
 
+.game-over-stats {
+    width: 100%;
+    max-height: 220px;
+    overflow-y: auto;
+    margin: 0.25rem 0;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(0.65rem, 1.8vw, 0.85rem);
+    color: var(--text-primary);
+}
+
+.stats-table th {
+    color: var(--main-color);
+    padding: 0.3rem 0.6rem;
+    border-bottom: 1px solid var(--main-color);
+    font-weight: normal;
+    text-align: center;
+}
+
+.stats-table th:first-child {
+    text-align: left;
+}
+
+.stats-table td {
+    padding: 0.2rem 0.6rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stats-table td:first-child {
+    text-align: left;
+}
+
+.stats-table tr:last-child td {
+    border-bottom: none;
+}
+
+.stats-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
 .game-over-actions {
+    width: 100%;
+    margin-top: 0.5rem;
     display: flex;
-    gap: 1rem;
     flex-wrap: wrap;
     justify-content: center;
-    margin-top: 0.5rem;
+    gap: 1rem;
+}
+
+.game-over-actions .btn {
+    min-width: 150px;
 }
 
 /* ==========================
     COUNTDOWN OVERLAY
 ========================== */
-
 .countdown-overlay {
     position: absolute;
     top: 50%;

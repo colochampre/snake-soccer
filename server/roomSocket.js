@@ -6,7 +6,8 @@ import {
     removePlayer,
     startGame,
     handleDirectionChange,
-    resumeAfterKickoff
+    resumeAfterKickoff,
+    resetBall
 } from './gameLogic.js';
 
 const roomIntervals = new Map();
@@ -61,49 +62,65 @@ function launchGame(roomId, room, io) {
         }
     }
 
+    // Set up starting positions for the preview during countdown
+    resetBall(gameState);
+    gameState.isPausedForGoal = true; // suppress 'TOCA EL BALÓN' hint
+
     const intervals = { game: null, timer: null };
     roomIntervals.set(roomId, intervals);
-
-    startGame(
-        gameState,
-        (state) => {
-            io.to(roomId).emit('game-update', serializeGameState(state));
-        },
-        (finalState) => {
-            io.to(roomId).emit('game-over', {
-                score: finalState.score,
-                winner: finalState.winner,
-                playerMatchStats: finalState.playerMatchStats,
-            });
-            const ri = roomIntervals.get(roomId);
-            if (ri) {
-                clearInterval(ri.game);
-                clearInterval(ri.timer);
-                roomIntervals.delete(roomId);
-            }
-        },
-        () => {
-            let count = 3;
-            const tick = () => {
-                io.to(roomId).emit('kickoff-countdown', { count });
-                if (count === 0) {
-                    resumeAfterKickoff(gameState);
-                    return;
-                }
-                count--;
-                setTimeout(tick, 1000);
-            };
-            tick();
-        },
-        intervals
-    );
-
     roomController.updateRoomGameState(roomId, gameState);
+
+    const onUpdate = (state) => io.to(roomId).emit('game-update', serializeGameState(state));
+
+    const onEnd = (finalState) => {
+        io.to(roomId).emit('game-over', {
+            score: finalState.score,
+            winner: finalState.winner,
+            teamNames: finalState.teamNames,
+            playerMatchStats: finalState.playerMatchStats,
+        });
+        const ri = roomIntervals.get(roomId);
+        if (ri) {
+            clearInterval(ri.game);
+            clearInterval(ri.timer);
+            roomIntervals.delete(roomId);
+        }
+    };
+
+    const onGoalScored = () => {
+        let c = 3;
+        const tick = () => {
+            io.to(roomId).emit('kickoff-countdown', { count: c });
+            if (c === 0) {
+                resumeAfterKickoff(gameState);
+                return;
+            }
+            c--;
+            setTimeout(tick, 1000);
+        };
+        tick();
+    };
+
+    // Emit game-starting and send initial positions preview
     io.to(roomId).emit('game-starting', {
         canvasWidth: gameState.canvasWidth,
         canvasHeight: gameState.canvasHeight,
         mode: gameState.mode,
     });
+    onUpdate(gameState);
+
+    // Pre-game countdown — starts the game loop only on GO
+    let count = 3;
+    const preGameTick = () => {
+        io.to(roomId).emit('kickoff-countdown', { count });
+        if (count === 0) {
+            startGame(gameState, onUpdate, onEnd, onGoalScored, intervals);
+            return;
+        }
+        count--;
+        setTimeout(preGameTick, 1000);
+    };
+    preGameTick();
 }
 
 function getMinPlayersPerTeam(mode) {

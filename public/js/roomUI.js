@@ -83,17 +83,51 @@ socket.on('game-over', (data) => {
     const overlay = document.getElementById('gameOverlay');
     const titleEl = document.getElementById('gameOverTitle');
     const scoreEl = document.getElementById('gameOverScore');
+    const statsEl = document.getElementById('gameOverStats');
     if (!overlay) return;
 
+    const tNames = data.teamNames || teamNames;
     if (titleEl) {
         if (data.winner === 'draw') {
             titleEl.textContent = '¡EMPATE!';
         } else {
-            const name = teamNames[data.winner] || (data.winner === 'team1' ? 'Equipo 1' : 'Equipo 2');
+            const name = tNames[data.winner] || (data.winner === 'team1' ? 'Equipo A' : 'Equipo B');
             titleEl.textContent = `¡${name.toUpperCase()} GANA!`;
         }
     }
-    if (scoreEl) scoreEl.textContent = `${data.score.team1} - ${data.score.team2}`;
+    if (scoreEl) {
+        const t1 = tNames.team1 || 'Equipo A';
+        const t2 = tNames.team2 || 'Equipo B';
+        scoreEl.textContent = `${t1}  ${data.score.team1} — ${data.score.team2}  ${t2}`;
+    }
+
+    if (statsEl && data.playerMatchStats) {
+        const stats = Object.values(data.playerMatchStats)
+            .sort((a, b) => (b.goals - a.goals) || (b.assists - a.assists));
+        statsEl.innerHTML = `
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Jugador</th>
+                        <th title="Goles"><i class="bi bi-dribbble"></i></th>
+                        <th title="Asistencias"><i class="bi bi-stars"></i></th>
+                        <th title="Toques"><i class="bi bi-hand-index-thumb"></i></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${stats.map(s => `
+                        <tr>
+                            <td>${s.username}</td>
+                            <td>${s.goals}</td>
+                            <td>${s.assists}</td>
+                            <td>${s.touches}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
     overlay.style.display = 'flex';
 });
 

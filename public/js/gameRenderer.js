@@ -110,7 +110,7 @@ function renderGame(state) {
 
     if (state.goalScoredBy) {
         const color = state.goalScoredBy === 'team1' ? 'var(--team-a)' : 'var(--team-b)';
-        const teamName = state.teamNames?.[state.goalScoredBy] || (state.goalScoredBy === 'team1' ? 'Equipo 1' : 'Equipo 2');
+        const teamName = state.teamNames?.[state.goalScoredBy] || (state.goalScoredBy === 'team1' ? 'Equipo A' : 'Equipo B');
         const text = `¡GOL de ${teamName.toUpperCase()}!`;
         ctx.font = `bold ${Math.max(20, Math.round(W * 0.04))}px monospace`;
         ctx.fillStyle = color;
