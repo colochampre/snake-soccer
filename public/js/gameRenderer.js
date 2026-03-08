@@ -115,7 +115,7 @@ function renderGame(state) {
         ctx.font = `bold ${Math.max(20, Math.round(W * 0.04))}px monospace`;
         ctx.fillStyle = color;
         ctx.textAlign = 'center';
-        ctx.fillText(text, W / 2, H / 2);
+        ctx.fillText(text, W / 2, Math.max(32, Math.round(W * 0.1)));
         ctx.textAlign = 'left';
     }
 

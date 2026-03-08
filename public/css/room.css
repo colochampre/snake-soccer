@@ -376,7 +376,7 @@
 
 .game-over-title {
     font-family: var(--title-font);
-    font-size: clamp(1.4rem, 5vw, 3rem);
+    font-size: clamp(1.4rem, 5vw, 2rem);
     color: var(--main-color);
     text-shadow: 0 0 20px var(--main-color), 0 0 40px var(--main-color-shadow);
     margin: 0;
@@ -385,7 +385,7 @@
 
 .game-over-score {
     font-family: 'Better VCR';
-    font-size: clamp(1.2rem, 4vw, 2.2rem);
+    font-size: clamp(1.2rem, 4vw, 1.6rem);
     color: var(--text-primary);
     margin: 0;
 }
