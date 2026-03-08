@@ -20,17 +20,17 @@
   },
   "homepage": "https://github.com/colochampre/snake-soccer#readme",
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "express-validator": "^7.0.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.1",
-    "mysql2": "^3.17.4",
-    "pug": "^3.0.3",
-    "socket.io": "^4.8.3"
+    "bcrypt": "5.1.1",
+    "cookie-parser": "1.4.6",
+    "cors": "2.8.6",
+    "dotenv": "17.3.1",
+    "express": "5.2.1",
+    "express-validator": "7.0.1",
+    "helmet": "8.1.0",
+    "jsonwebtoken": "9.0.2",
+    "morgan": "1.10.1",
+    "mysql2": "3.17.4",
+    "pug": "3.0.3",
+    "socket.io": "4.8.3"
   }
 }
