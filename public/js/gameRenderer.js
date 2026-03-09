@@ -154,9 +154,10 @@ function renderGame(state) {
             rowY += lineH;
         }
 
-        const scorerLabel = hasScorer ? `\u00a1GOL de ${state.goalScorerUsername}` : '';
-        drawGoalRow(goalBallIcon, scorerLabel, teamColor, true);
-        if (hasAssist) drawGoalRow(goalAssistIcon, state.goalAssisterUsername, '#aaa', false);
+        const scorerLabel = `\u00a1GOL de ${state.goalScorerUsername}`;
+
+        if (hasScorer)drawGoalRow(goalBallIcon, scorerLabel, teamColor, true);
+        if (hasAssist) drawGoalRow(goalAssistIcon, state.goalAssisterUsername, '#ddd', false);
         ctx.restore();
     }
 
