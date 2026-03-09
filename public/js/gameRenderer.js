@@ -8,6 +8,12 @@ const SEG = 20;
 let ballTexture = new Image();
 let ballPattern = null;
 
+// --- Goal Icons ---
+const goalBallIcon = new Image();
+goalBallIcon.src = '/img/ball-icon.svg';
+const goalAssistIcon = new Image();
+goalAssistIcon.src = '/img/high-five-icon.svg';
+
 const BALL_TEXTURE_MAP = {
     'texture-1': '/img/ball-base-1.png',
     'texture-2': '/img/ball-base-2.png',
@@ -60,39 +66,31 @@ function renderGame(state) {
 
     ctx.clearRect(0, 0, W, H);
 
-    ctx.fillStyle = '#0a1628';
+    ctx.fillStyle = '#09260E';
     ctx.fillRect(0, 0, W, H);
 
     const fx = (W - fieldWidth) / 2;
     const fy = (H - fieldHeight) / 2;
 
-    ctx.fillStyle = '#0d2137';
+    ctx.fillStyle = '#0B3312';
     ctx.fillRect(fx, fy, fieldWidth, fieldHeight);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.lineWidth = 1;
     ctx.strokeRect(fx, fy, fieldWidth, fieldHeight);
 
     ctx.beginPath();
     ctx.moveTo(W / 2, fy);
     ctx.lineTo(W / 2, fy + fieldHeight);
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.stroke();
     ctx.setLineDash([]);
 
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(W / 2, H / 2, fieldHeight * 0.15, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     ctx.stroke();
-
-    const goalY = (H - goalHeight) / 2;
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.fillRect(0, goalY, fx, goalHeight);
-    ctx.fillRect(W - fx, goalY, fx, goalHeight);
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, goalY, fx, goalHeight);
-    ctx.strokeRect(W - fx, goalY, fx, goalHeight);
 
     for (const player of Object.values(state.players)) {
         if (player.body && player.body.length > 0) drawSnakeOnField(player);
@@ -100,23 +98,66 @@ function renderGame(state) {
 
     drawBall(state.ball);
 
+    const goalY = (H - goalHeight) / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillRect(0, goalY, fx, goalHeight);
+    ctx.fillRect(W - fx, goalY, fx, goalHeight);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, goalY, fx, goalHeight);
+    ctx.strokeRect(W - fx, goalY, fx, goalHeight);
+
     if (state.kickOff && !state.isPausedForGoal) {
         ctx.font = `bold ${Math.max(14, Math.round(W * 0.018))}px monospace`;
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.textAlign = 'center';
-        ctx.fillText('TOCA EL BALÓN', W / 2, H / 2 - fieldHeight * 0.12);
+        ctx.fillText('TOCA EL BALÓN', W / 2, H / 2 - fieldHeight * 0.16);
         ctx.textAlign = 'left';
     }
 
     if (state.goalScoredBy) {
-        const color = state.goalScoredBy === 'team1' ? 'var(--team-a)' : 'var(--team-b)';
-        const teamName = state.teamNames?.[state.goalScoredBy] || (state.goalScoredBy === 'team1' ? 'Equipo A' : 'Equipo B');
-        const text = `¡GOL de ${teamName.toUpperCase()}!`;
-        ctx.font = `bold ${Math.max(20, Math.round(W * 0.04))}px monospace`;
-        ctx.fillStyle = color;
-        ctx.textAlign = 'center';
-        ctx.fillText(text, W / 2, Math.max(32, Math.round(W * 0.1)));
-        ctx.textAlign = 'left';
+        const teamColor = getTeamColorFromCSS(state.goalScoredBy);
+        const nameSize = Math.max(16, Math.round(W * 0.026));
+        const iconSize = Math.round(nameSize);
+        const lineH = Math.round(nameSize * 1.2);
+        const hasScorer = !!state.goalScorerUsername;
+        const hasAssist = !!state.goalAssisterUsername;
+        const rows = (hasScorer ? 1 : 0) + (hasAssist ? 1 : 0) || 1;
+        const panelH = Math.round(rows * lineH + 12);
+        const panelY = Math.max(8, Math.round(H * 0.03));
+
+        ctx.save();
+
+        let rowY = panelY + 12;
+
+        function drawGoalRow(icon, label, color, bold) {
+            ctx.font = `${bold ? 'bold ' : ''}${nameSize}px monospace`;
+            const textW = ctx.measureText(label).width;
+            const totalW = iconSize + 8 + textW;
+            const startX = Math.round((W - totalW) / 2);
+            const iconY = rowY + Math.round((lineH - iconSize) / 2);
+            if (icon.complete && icon.naturalWidth > 0) {
+                const off = document.createElement('canvas');
+                off.width = iconSize;
+                off.height = iconSize;
+                const offCtx = off.getContext('2d');
+                offCtx.drawImage(icon, 0, 0, iconSize, iconSize);
+                offCtx.globalCompositeOperation = 'source-in';
+                offCtx.fillStyle = color;
+                offCtx.fillRect(0, 0, iconSize, iconSize);
+                ctx.drawImage(off, startX, iconY, iconSize, iconSize);
+            }
+            ctx.fillStyle = color;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, startX + iconSize + 8, rowY + Math.round(lineH / 2));
+            rowY += lineH;
+        }
+
+        const scorerLabel = hasScorer ? `\u00a1GOL de ${state.goalScorerUsername}` : '';
+        drawGoalRow(goalBallIcon, scorerLabel, teamColor, true);
+        if (hasAssist) drawGoalRow(goalAssistIcon, state.goalAssisterUsername, '#aaa', false);
+        ctx.restore();
     }
 
     if (state.isGameOver && state.winner) {
@@ -184,18 +225,6 @@ function drawSnakeOnField(player) {
         rrect(ctx, seg.x, seg.y, SEG, SEG, 3);
         ctx.fill();
         ctx.stroke();
-        /*if (isHead) {
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(seg.x + SEG - 5, seg.y + 5, 2.5, 0, Math.PI * 2);
-            ctx.arc(seg.x + SEG - 5, seg.y + SEG - 5, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#111';
-            ctx.beginPath();
-            ctx.arc(seg.x + SEG - 4, seg.y + 5, 1.2, 0, Math.PI * 2);
-            ctx.arc(seg.x + SEG - 4, seg.y + SEG - 5, 1.2, 0, Math.PI * 2);
-            ctx.fill();
-        }*/
     }
     const head = body[0];
     ctx.font = `${Math.max(9, SEG * 0.6)}px monospace`;

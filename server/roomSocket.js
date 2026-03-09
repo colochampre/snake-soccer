@@ -32,6 +32,8 @@ function serializeGameState(state) {
         kickOff: state.kickOff,
         isPausedForGoal: state.isPausedForGoal,
         goalScoredBy: state.goalScoredBy,
+        goalScorerUsername: state.goalScorerUsername,
+        goalAssisterUsername: state.goalAssisterUsername,
         isGameOver: state.isGameOver,
         winner: state.winner,
         mode: state.mode,

@@ -364,6 +364,10 @@ function handleGoal(gameState, scoringTeam, onUpdate, onGoalScored) {
         gameState.score.team2++;
     }
     gameState.goalScoredBy = scoringTeam;
+    gameState.goalScorerUsername = (scorerPlayerId && gameState.players[scorerPlayerId])
+        ? gameState.players[scorerPlayerId].username : null;
+    gameState.goalAssisterUsername = (assisterPlayerId && assisterPlayerId !== scorerPlayerId && gameState.players[assisterPlayerId])
+        ? gameState.players[assisterPlayerId].username : null;
     gameState.isPausedForGoal = true;
 
     onUpdate(gameState); // Send goal message and updated score
@@ -383,6 +387,8 @@ function handleGoal(gameState, scoringTeam, onUpdate, onGoalScored) {
 
 function resetBall(gameState) {
     gameState.goalScoredBy = null;
+    gameState.goalScorerUsername = null;
+    gameState.goalAssisterUsername = null;
     gameState.kickOff = true;
     gameState.lastTouchedBy = { team1: [null, null], team2: [null, null] }; // Reset last touched
 
