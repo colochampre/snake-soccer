@@ -404,6 +404,30 @@
     margin: 0.25rem 0;
 }
 
+.stat-icon {
+    display: inline-block;
+    width: 1.75rem;
+    height: 1.75rem;
+    vertical-align: middle;
+    background-color: var(--main-color);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+.stat-icon-goal {
+    -webkit-mask-image: url('/img/ball-icon.svg');
+    mask-image: url('/img/ball-icon.svg');
+}
+
+.stat-icon-assist {
+    -webkit-mask-image: url('/img/high-five-icon.svg');
+    mask-image: url('/img/high-five-icon.svg');
+}
+
 .stats-table {
     width: 100%;
     border-collapse: collapse;
@@ -412,9 +436,10 @@
 }
 
 .stats-table th {
-    color: var(--main-color);
     padding: 0.3rem 0.6rem;
     border-bottom: 1px solid var(--main-color);
+    color: var(--main-color);
+    font-size: 1.4rem;
     font-weight: normal;
     text-align: center;
 }
@@ -522,8 +547,9 @@
 ========================== */
 
 @media (min-width: 1536px) {
-
+    
     .game-over-content, .game-over-title {
+        justify-content: start;
         width: auto;
     }
 

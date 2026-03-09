@@ -111,8 +111,8 @@ socket.on('game-over', (data) => {
                 <thead>
                     <tr>
                         <th>Jugador</th>
-                        <th title="Goles"><i class="bi bi-dribbble"></i></th>
-                        <th title="Asistencias"><i class="bi bi-stars"></i></th>
+                        <th title="Goles"><span class="stat-icon stat-icon-goal"></span></th>
+                        <th title="Asistencias"><span class="stat-icon stat-icon-assist"></span></th>
                         <th title="Toques"><i class="bi bi-crosshair"></i></th>
                     </tr>
                 </thead>
