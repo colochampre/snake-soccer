@@ -250,7 +250,7 @@ h6 {
 
 .room-options select {
     width: 22%;
-    font-size: 0.9rem;
+    font-size: 1rem;
     text-align: end;
 }
 
@@ -263,6 +263,7 @@ h6 {
     cursor: pointer;
     font-family: 'Better VCR';
     padding: 0.5rem 0;
+    text-align: center;
 }
 
 .room-options .private-room {
@@ -639,6 +640,7 @@ h6 {
 ========================== */
 
 .main-wrapper {
+    position: relative;
     max-width: 100%;
     min-height: 0;
     margin: 0 1rem;
@@ -647,6 +649,7 @@ h6 {
     justify-content: center;
     align-items: center;
     flex: 1;
+    overflow: hidden;
 }
 
 #scoreboard {

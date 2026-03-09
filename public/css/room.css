@@ -468,6 +468,13 @@
     pointer-events: auto;
 }
 
+@media (min-width: 1536px) {
+    .joystick-zone {
+        display: none !important;
+        pointer-events: none !important;
+    }
+}
+
 /* ==========================
     COUNTDOWN OVERLAY
 ========================== */

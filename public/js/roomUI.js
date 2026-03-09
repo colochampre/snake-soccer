@@ -379,6 +379,7 @@ let joystickManager = null;
 function initJoystick() {
     if (typeof nipplejs === 'undefined' || !joystickZone) return;
     if (joystickManager) return;
+    if (window.innerWidth >= 1536) return;
 
     joystickZone.classList.add('active');
 
