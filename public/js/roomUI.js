@@ -49,6 +49,8 @@ socket.on('game-starting', (data) => {
     if (overlay) overlay.classList.remove('active');
     initJoystick();
     updateReadyButton();
+    // Start interpolated render loop
+    if (window.gameRenderer) window.gameRenderer.startRenderLoop();
 });
 
 const timerEl = document.getElementById('timer');
@@ -57,8 +59,16 @@ socket.on('game-update', (state) => {
     if (!ctx) return;
     if (canvas.width !== state.canvasWidth) canvas.width = state.canvasWidth;
     if (canvas.height !== state.canvasHeight) canvas.height = state.canvasHeight;
-    renderGame(state);
-    updateScoreboard(state);
+    
+    // Use interpolation system instead of direct render
+    if (window.gameRenderer) {
+        window.gameRenderer.updateGameState(state);
+        window.gameRenderer.updateScoreboard(state);
+    } else {
+        renderGame(state);
+        updateScoreboard(state);
+    }
+    
     if (timerEl) {
         if (state.timeLeft <= 10 && !state.isGameOver) {
             timerEl.classList.add('timer-danger');
@@ -81,6 +91,8 @@ socket.on('kickoff-countdown', ({ count }) => {
 socket.on('game-over', (data) => {
     isGameActive = false;
     destroyJoystick();
+    // Stop interpolated render loop
+    if (window.gameRenderer) window.gameRenderer.stopRenderLoop();
     if (timerEl) timerEl.classList.remove('timer-danger');
 
     const overlay = document.getElementById('gameOverlay');
@@ -137,6 +149,8 @@ socket.on('game-over', (data) => {
 socket.on('lobby-restored', (data) => {
     isGameActive = false;
     destroyJoystick();
+    // Stop interpolated render loop
+    if (window.gameRenderer) window.gameRenderer.stopRenderLoop();
     allPlayers = data.players;
     const me = data.players.find(p => p.id === myPlayer?.id);
     if (me) myPlayer = me;

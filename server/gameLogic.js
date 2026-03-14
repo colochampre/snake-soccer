@@ -223,11 +223,6 @@ function updateBallPosition(gameState, onGoal) {
         ball.spin = (ball.spin || 0) * 0.96; // Normal decay
     }
     
-    // Stop the ball completely if both speed and spin are very low
-    if (currentSpeed < 50 && Math.abs(ball.spin || 0) < 0.5) {
-        ball.spin = 0;
-    }
-    
     // Magnus effect: spin creates perpendicular force to velocity
     if (ball.spin && Math.abs(ball.spin) > 0.1) {
         if (currentSpeed > 100 && Math.abs(ball.spin) < 4) { // Only apply if ball is moving

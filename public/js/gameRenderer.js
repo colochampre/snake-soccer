@@ -4,6 +4,88 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
 const SEG = 20;
 
+// === INTERPOLATION SYSTEM ===
+const SERVER_TICK_RATE = 1000 / 30; // 33.33ms between server updates
+let prevState = null;
+let currentState = null;
+let lastUpdateTime = 0;
+let animationFrameId = null;
+
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+function interpolateState(prev, curr, t) {
+    if (!prev || !curr) return curr;
+    
+    const interpolated = {
+        ...curr,
+        ball: curr.ball ? {
+            ...curr.ball,
+            x: lerp(prev.ball?.x ?? curr.ball.x, curr.ball.x, t),
+            y: lerp(prev.ball?.y ?? curr.ball.y, curr.ball.y, t),
+        } : null,
+        players: {}
+    };
+    for (const id in curr.players) {
+        const currPlayer = curr.players[id];
+        const prevPlayer = prev.players?.[id];
+
+        if (!prevPlayer || !currPlayer.body || !prevPlayer.body) {
+            interpolated.players[id] = currPlayer;
+            continue;
+        }
+        interpolated.players[id] = {
+            ...currPlayer,
+            body: currPlayer.body.map((seg, i) => {
+                const prevSeg = prevPlayer.body[i];
+                if (!prevSeg) return seg;
+                return {
+                    x: lerp(prevSeg.x, seg.x, t),
+                    y: lerp(prevSeg.y, seg.y, t)
+                };
+            })
+        };
+    }
+    return interpolated;
+}
+
+function startRenderLoop() {
+    if (animationFrameId) return;
+
+    function render() {
+        if (!currentState) {
+            animationFrameId = requestAnimationFrame(render);
+            return;
+        }
+
+        const now = performance.now();
+        const elapsed = now - lastUpdateTime;
+        const t = Math.min(elapsed / SERVER_TICK_RATE, 1);
+
+        const interpolatedState = interpolateState(prevState, currentState, t);
+        renderGame(interpolatedState);
+
+        animationFrameId = requestAnimationFrame(render);
+    }
+    animationFrameId = requestAnimationFrame(render);
+}
+
+function stopRenderLoop() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    prevState = null;
+    currentState = null;
+}
+
+function updateGameState(newState) {
+    prevState = currentState;
+    currentState = newState;
+    lastUpdateTime = performance.now();
+}
+
 // --- Ball Texture ---
 let ballTexture = new Image();
 let ballPattern = null;
@@ -161,7 +243,7 @@ function renderGame(state) {
         } else {
             drawGoalRow(goalBallIcon, '¡GOL!', teamColor, true);
         }
-        
+
         if (hasAssist) {
             drawGoalRow(goalAssistIcon, state.goalAssisterUsername, '#ddd', false);
         }
@@ -263,3 +345,11 @@ function updateScoreboard(state) {
         timerEl.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
     }
 }
+
+// Export interpolation functions for roomUI.js
+window.gameRenderer = {
+    updateGameState,
+    startRenderLoop,
+    stopRenderLoop,
+    updateScoreboard
+};

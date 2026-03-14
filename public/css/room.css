@@ -366,12 +366,12 @@
 }
 
 .game-over-content {
-    width: 100%;
+    width: auto;
     height: 100%;
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     text-align: center;
     gap: .75rem;
@@ -382,7 +382,7 @@
     margin-bottom: .25rem;
     background: rgba(0, 0, 0, 0.9);
     font-family: var(--title-font);
-    font-size: clamp(1.4rem, 5vw, 2rem);
+    font-size: clamp(1.4rem, 4vw, 2rem);
     color: var(--main-color);
     text-shadow: 0 0 20px var(--main-color), 0 0 40px var(--main-color-shadow);
     margin: 0;
@@ -391,7 +391,7 @@
 
 .game-over-score {
     font-family: 'Better VCR';
-    font-size: clamp(1rem, 3vw, 1.2rem);
+    font-size: clamp(1rem, 1vw, .9rem);
     color: var(--text-primary);
     margin: 0;
 }
@@ -439,7 +439,7 @@
     padding: 0.3rem 0.6rem;
     border-bottom: 1px solid var(--main-color);
     color: var(--main-color);
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-weight: normal;
     text-align: center;
 }
@@ -547,7 +547,7 @@
 
 @media (min-width: 1536px) {
     
-    .game-over-content, .game-over-title {
+    .game-over-title {
         justify-content: start;
         width: auto;
     }
