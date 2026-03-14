@@ -202,7 +202,7 @@ function drawBall(ball) {
     ctx.translate(-ball.x, -ball.y);
 
     if (ballPattern && ballTexture.width > 0 && ballTexture.height > 0) {
-        const matrix = new DOMMatrix().translate(ball.x, ball.y);
+        const matrix = new DOMMatrix().translate(ball.x * 1.6, ball.y * 1.6);
         ballPattern.setTransform(matrix);
         ctx.fillStyle = ballPattern;
         ctx.beginPath();
