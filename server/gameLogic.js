@@ -6,6 +6,7 @@ const BALL_FRICTION = 0.98; // Lower = more friction
 const BALL_HIT_SPEED = 400; // Speed of the ball after being hit
 const BOUNCE_ENERGY_LOSS = 0.8;
 const HIT_COOLDOWN_FRAMES = 3;
+const MAGNUS_EFFECT_STRENGTH = 3.00; // Strength of spin effect on trajectory
 
 // Headbutt Mechanic Constants
 const HEADBUTT_SPEED_BOOST = 500;
@@ -213,6 +214,24 @@ function updateBallPosition(gameState, onGoal) {
     ball.vx *= BALL_FRICTION;
     ball.vy *= BALL_FRICTION;
     ball.spin = (ball.spin || 0) * 0.96; // Decay spin over time - lower = faster decay
+    
+    // Magnus effect: spin creates perpendicular force to velocity
+    if (ball.spin && Math.abs(ball.spin) > 0.1) {
+        const speed = Math.hypot(ball.vx, ball.vy);
+        console.log(`spin: ${ball.spin}, speed: ${speed}`);
+        if (speed > 100 && Math.abs(ball.spin) < 5) { // Only apply if ball is moving
+            // Perpendicular vector to velocity (rotated 90 degrees)
+            const perpX = -ball.vy;
+            const perpY = ball.vx;
+            const perpLength = Math.hypot(perpX, perpY) || 1;
+            
+            // Normalize and apply Magnus force
+            const magnusForce = ball.spin * MAGNUS_EFFECT_STRENGTH;
+            ball.vx += (perpX / perpLength) * magnusForce;
+            ball.vy += (perpY / perpLength) * magnusForce;
+        }
+    }
+    
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
 
