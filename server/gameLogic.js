@@ -217,7 +217,7 @@ function updateBallPosition(gameState, onGoal) {
     const currentSpeed = Math.hypot(ball.vx, ball.vy);
     
     // Dissipate spin more aggressively at low speeds to prevent perpetual motion
-    if (currentSpeed < 100) {
+    if (currentSpeed < 200) {
         ball.spin = (ball.spin || 0) * 0.85; // Faster decay at low speeds
     } else {
         ball.spin = (ball.spin || 0) * 0.96; // Normal decay

@@ -69,18 +69,19 @@ block user-panel
     div.user-wrapper.panel#userPanel
         h3.text-center.flicker2 Controles
         div.game-controls
-            div.control-set
+            div.control-set#wasdControls
                 span.key.key-w#keyW W
                 div
                     span.key.key-a#keyA A
                     span.key.key-s#keyS S
                     span.key.key-d#keyD D
-            div.control-set
+            div.control-set#arrowControls
                 i.bi.bi-caret-up-square#keyUp
                 div
                     i.bi.bi-caret-left-square#keyLeft 
                     i.bi.bi-caret-down-square#keyDown 
                     i.bi.bi-caret-right-square#keyRight 
+                
 
 block scripts
     script(src="/socket.io/socket.io.js")

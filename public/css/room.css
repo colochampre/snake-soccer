@@ -539,6 +539,10 @@
     .lobby-title {
         padding: 0 1rem 0.5rem;
     }
+
+    #userToggle {
+        display: none;
+    }
 }
 
 /* ==========================
