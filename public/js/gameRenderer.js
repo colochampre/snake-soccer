@@ -181,7 +181,7 @@ function renderGame(state) {
     drawBall(state.ball);
 
     const goalY = (H - goalHeight) / 2;
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fillRect(0, goalY, fx, goalHeight);
     ctx.fillRect(W - fx, goalY, fx, goalHeight);
     ctx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -189,43 +189,62 @@ function renderGame(state) {
     ctx.strokeRect(0, goalY, fx, goalHeight);
     ctx.strokeRect(W - fx, goalY, fx, goalHeight);
 
-    // DEBUG: Draw goal post corner borders in red for testing
-    // These are the horizontal segments at top and bottom of goal openings
-    ctx.strokeStyle = '#FF0000';
+    // Goal area inner borders with team colors
+    const teamAColor = getTeamColorFromCSS('team1');
+    const teamBColor = getTeamColorFromCSS('team2');
     ctx.lineWidth = 3;
-    // Left side - top corner border
+
+    // Left goal area (Team A defends) - use Team B color for attacking team
+    ctx.strokeStyle = teamBColor;
+    ctx.fillStyle = teamBColor;
+    // Top border
     ctx.beginPath();
     ctx.moveTo(0, goalY);
     ctx.lineTo(fx, goalY);
     ctx.stroke();
-    // Left side - bottom corner border
+    // Bottom border
     ctx.beginPath();
     ctx.moveTo(0, goalY + goalHeight);
     ctx.lineTo(fx, goalY + goalHeight);
     ctx.stroke();
-    // Right side - top corner border
+    // Back border (goal line)
+    ctx.beginPath();
+    ctx.moveTo(1, goalY);
+    ctx.lineTo(1, goalY + goalHeight);
+    ctx.stroke();
+    // Corner points
+    ctx.beginPath();
+    ctx.arc(fx, goalY, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(fx, goalY + goalHeight, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right goal area (Team B defends) - use Team A color for attacking team
+    ctx.strokeStyle = teamAColor;
+    ctx.fillStyle = teamAColor;
+    // Top border
     ctx.beginPath();
     ctx.moveTo(W - fx, goalY);
     ctx.lineTo(W, goalY);
     ctx.stroke();
-    // Right side - bottom corner border
+    // Bottom border
     ctx.beginPath();
     ctx.moveTo(W - fx, goalY + goalHeight);
     ctx.lineTo(W, goalY + goalHeight);
     ctx.stroke();
-    // DEBUG: Draw corner points (where ball can bounce off corners)
-    ctx.fillStyle = '#FF0000';
-    const corners = [
-        { x: fx, y: goalY },                    // Left top corner
-        { x: fx, y: goalY + goalHeight },       // Left bottom corner
-        { x: W - fx, y: goalY },                // Right top corner
-        { x: W - fx, y: goalY + goalHeight },   // Right bottom corner
-    ];
-    for (const corner of corners) {
-        ctx.beginPath();
-        ctx.arc(corner.x, corner.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    // Back border (goal line)
+    ctx.beginPath();
+    ctx.moveTo(W - 1, goalY);
+    ctx.lineTo(W - 1, goalY + goalHeight);
+    ctx.stroke();
+    // Corner points
+    ctx.beginPath();
+    ctx.arc(W - fx, goalY, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(W - fx, goalY + goalHeight, 5, 0, Math.PI * 2);
+    ctx.fill();
 
     if (state.kickOff && !state.isPausedForGoal) {
         ctx.font = `bold ${Math.max(14, Math.round(W * 0.018))}px monospace`;

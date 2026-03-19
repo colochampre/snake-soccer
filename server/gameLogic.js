@@ -348,6 +348,15 @@ function updateBallPosition(gameState, onGoal) {
             reflectBall(-1, 0);
         }
     }
+    // Canvas boundaries (back of goal areas) - prevent ball from going off-screen
+    if (ball.x - ball.size < 0) {
+        ball.x = ball.size;
+        reflectBall(1, 0);
+    }
+    if (ball.x + ball.size > gameState.canvasWidth) {
+        ball.x = gameState.canvasWidth - ball.size;
+        reflectBall(-1, 0);
+    }
     // Top wall
     if (ball.y - ball.size < fieldY_start) {
         ball.y = fieldY_start + ball.size;
