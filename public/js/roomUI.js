@@ -88,6 +88,17 @@ socket.on('kickoff-countdown', ({ count }) => {
     }
 });
 
+socket.on('sound-events', (events) => {
+    if (!window.SoundManager) return;
+    for (const event of events) {
+        if (event.type === 'ballKick') {
+            window.SoundManager.playBallKick(event.isBoost);
+        } else if (event.type === 'hitPost') {
+            window.SoundManager.playHitPost(event.isHardHit);
+        }
+    }
+});
+
 socket.on('game-over', (data) => {
     isGameActive = false;
     destroyJoystick();

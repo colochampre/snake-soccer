@@ -72,7 +72,12 @@ function launchGame(roomId, room, io) {
     roomIntervals.set(roomId, intervals);
     roomController.updateRoomGameState(roomId, gameState);
 
-    const onUpdate = (state) => io.to(roomId).emit('game-update', serializeGameState(state));
+    const onUpdate = (state, soundEvents = []) => {
+        io.to(roomId).emit('game-update', serializeGameState(state));
+        if (soundEvents.length > 0) {
+            io.to(roomId).emit('sound-events', soundEvents);
+        }
+    };
 
     const onEnd = (finalState) => {
         io.to(roomId).emit('game-over', {

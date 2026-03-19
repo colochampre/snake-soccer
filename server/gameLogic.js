@@ -164,15 +164,17 @@ function gameLoop(gameState, onUpdate, onEnd, onGoalScored) {
         if (player.headbuttActive > 0) player.headbuttActive--;
     }
 
+    let soundEvents = [];
     if (!gameState.isPausedForGoal) {
         Object.values(gameState.players).forEach(player => moveSnake(gameState, player));
-        updateBallPosition(gameState, (scorer) => {
+        const ballSoundEvents = updateBallPosition(gameState, (scorer) => {
             handleGoal(gameState, scorer, onUpdate, onGoalScored);
         });
-        checkCollisions(gameState);
+        const collisionSoundEvents = checkCollisions(gameState);
+        soundEvents = [...(ballSoundEvents || []), ...collisionSoundEvents];
     }
 
-    onUpdate(gameState);
+    onUpdate(gameState, soundEvents);
 }
 
 function moveSnake(gameState, player) {
@@ -206,7 +208,8 @@ function moveSnake(gameState, player) {
 }
 
 function updateBallPosition(gameState, onGoal) {
-    if (gameState.kickOff || gameState.isPausedForGoal) return;
+    const soundEvents = [];
+    if (gameState.kickOff || gameState.isPausedForGoal) return soundEvents;
     
     const { ball } = gameState;
     const dt = 1 / 30;
@@ -284,11 +287,18 @@ function updateBallPosition(gameState, onGoal) {
     for (const corner of corners) {
         const collision = checkPointCollision(corner.x, corner.y);
         if (collision) {
+            // Determine if it's a hard hit or soft touch based on velocity
+            const maxVelocity = Math.max(Math.abs(ball.vx), Math.abs(ball.vy));
+            soundEvents.push({
+                type: 'hitPost',
+                isHardHit: maxVelocity > 200
+            });
+            
             // Push ball out of corner
             ball.x = corner.x + collision.nx * ball.size;
             ball.y = corner.y + collision.ny * ball.size;
             reflectBall(collision.nx, collision.ny);
-            return; // Only one collision per frame
+            return soundEvents; // Only one collision per frame
         }
     }
 
@@ -367,9 +377,13 @@ function updateBallPosition(gameState, onGoal) {
         ball.y = fieldY_end - ball.size;
         reflectBall(0, -1);
     }
+    
+    return soundEvents;
 }
 
 function checkCollisions(gameState) {
+    const soundEvents = [];
+    
     for (const id in gameState.players) {
         const player = gameState.players[id];
         if (player.hitCooldown > 0) player.hitCooldown--;
@@ -391,6 +405,13 @@ function checkCollisions(gameState) {
                 // --------------------
 
                 const isHead = player.body.indexOf(segment) === 0;
+                const isBoostKick = isHead && player.isMoving && player.headbuttActive > 0;
+                
+                // Add sound event for ball kick
+                soundEvents.push({
+                    type: 'ballKick',
+                    isBoost: isBoostKick
+                });
 
                 if (!player.isMoving || !isHead) {
                     // Simplified bounce logic for stationary snake or body segments
@@ -447,6 +468,8 @@ function checkCollisions(gameState) {
             }
         }
     }
+    
+    return soundEvents;
 }
 
 function handleBallTouch(gameState, player) {
