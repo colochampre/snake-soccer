@@ -26,7 +26,14 @@ const SoundManager = {
                 '/sound/ball-post-hit-2.mp3',
                 '/sound/ball-post-hit-3.mp3',
             ]
-        }
+        },
+        net: {
+            hit: [
+                '/sound/goal-net-hit-1.mp3',
+                '/sound/goal-net-hit-2.mp3',
+                '/sound/goal-net-hit-3.mp3',
+            ]
+        },
         // Future sound categories can be added here:
         // goal: { ... },
         // countdown: { ... },
@@ -110,6 +117,10 @@ const SoundManager = {
 
     playHitPost(isHardHit = false) {
         this.play('hitPost', isHardHit ? 'hit' : 'touch');
+    },
+
+    playNetHit() {
+        this.play('net', 'hit');
     },
 
     setEnabled(enabled) {

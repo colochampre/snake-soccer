@@ -309,11 +309,13 @@ function updateBallPosition(gameState, onGoal) {
         if (ball.y + ball.size > goalYStart && ball.y < goalYStart && ball.vy > 0) {
             ball.y = goalYStart - ball.size;
             reflectBall(0, -1);
+            soundEvents.push({type: 'netHit'})
         }
         // Bottom border
         else if (ball.y - ball.size < goalYEnd && ball.y > goalYEnd && ball.vy < 0) {
             ball.y = goalYEnd + ball.size;
             reflectBall(0, 1);
+            soundEvents.push({type: 'netHit'})
         }
     }
 
@@ -323,11 +325,13 @@ function updateBallPosition(gameState, onGoal) {
         if (ball.y + ball.size > goalYStart && ball.y < goalYStart && ball.vy > 0) {
             ball.y = goalYStart - ball.size;
             reflectBall(0, -1);
+            soundEvents.push({type: 'netHit'})
         }
         // Bottom border
         else if (ball.y - ball.size < goalYEnd && ball.y > goalYEnd && ball.vy < 0) {
             ball.y = goalYEnd + ball.size;
             reflectBall(0, 1);
+            soundEvents.push({type: 'netHit'})
         }
     }
 
@@ -338,8 +342,9 @@ function updateBallPosition(gameState, onGoal) {
     if (ball.x - ball.size < fieldX_start) {
         if (ballInGoalZoneY) {
             if (ball.x - ball.size < 0) { // Goal line
+                soundEvents.push({type: 'netHit'});
                 onGoal('team2');
-                return;
+                return soundEvents;
             }
         } else {
             ball.x = fieldX_start + ball.size;
@@ -350,8 +355,9 @@ function updateBallPosition(gameState, onGoal) {
     if (ball.x + ball.size > fieldX_end) {
         if (ballInGoalZoneY) {
             if (ball.x + ball.size > gameState.canvasWidth) { // Goal line
+                soundEvents.push({type: 'netHit'});
                 onGoal('team1');
-                return;
+                return soundEvents;
             }
         } else {
             ball.x = fieldX_end - ball.size;
@@ -362,10 +368,12 @@ function updateBallPosition(gameState, onGoal) {
     if (ball.x - ball.size < 0) {
         ball.x = ball.size;
         reflectBall(1, 0);
+        soundEvents.push({type: 'netHit'});
     }
     if (ball.x + ball.size > gameState.canvasWidth) {
         ball.x = gameState.canvasWidth - ball.size;
         reflectBall(-1, 0);
+        soundEvents.push({type: 'netHit'});
     }
     // Top wall
     if (ball.y - ball.size < fieldY_start) {

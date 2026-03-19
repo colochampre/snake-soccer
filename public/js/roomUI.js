@@ -95,6 +95,8 @@ socket.on('sound-events', (events) => {
             window.SoundManager.playBallKick(event.isBoost);
         } else if (event.type === 'hitPost') {
             window.SoundManager.playHitPost(event.isHardHit);
+        } else if (event.type === 'netHit') {
+            window.SoundManager.playNetHit();
         }
     }
 });
