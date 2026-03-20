@@ -5,6 +5,7 @@ const BALL_SIZE = 15;
 const BALL_FRICTION = 0.98; // Lower = more friction
 const BALL_HIT_SPEED = 400; // Speed of the ball after being hit
 const BOUNCE_ENERGY_LOSS = 0.8;
+const NET_ENERGY_ABSORPTION = 0.2; // Energy retained when hitting the goal net
 const HIT_COOLDOWN_FRAMES = 3;
 const MAGNUS_EFFECT_STRENGTH = 3.00; // Strength of spin effect on trajectory
 
@@ -120,6 +121,7 @@ function startGame(gameState, onUpdate, onEnd, onGoalScored, intervals) {
     gameState.goalScoredBy = null;
 
     resetBall(gameState);
+    gameState.kickOff = false;
 
     if (intervals.game) clearInterval(intervals.game);
     if (intervals.timer) clearInterval(intervals.timer);
@@ -165,14 +167,16 @@ function gameLoop(gameState, onUpdate, onEnd, onGoalScored) {
     }
 
     let soundEvents = [];
-    if (!gameState.isPausedForGoal) {
+    if (!gameState.kickOff) {
         Object.values(gameState.players).forEach(player => moveSnake(gameState, player));
-        const ballSoundEvents = updateBallPosition(gameState, (scorer) => {
-            handleGoal(gameState, scorer, onUpdate, onGoalScored);
-        });
-        const collisionSoundEvents = checkCollisions(gameState);
-        soundEvents = [...(ballSoundEvents || []), ...collisionSoundEvents];
     }
+    const ballSoundEvents = updateBallPosition(gameState, (scorer) => {
+        if (!gameState.isPausedForGoal) {
+            handleGoal(gameState, scorer, onUpdate, onGoalScored);
+        }
+    });
+    const collisionSoundEvents = checkCollisions(gameState);
+    soundEvents = [...(ballSoundEvents || []), ...collisionSoundEvents];
 
     onUpdate(gameState, soundEvents);
 }
@@ -209,7 +213,7 @@ function moveSnake(gameState, player) {
 
 function updateBallPosition(gameState, onGoal) {
     const soundEvents = [];
-    if (gameState.kickOff || gameState.isPausedForGoal) return soundEvents;
+    if (gameState.kickOff) return soundEvents;
     
     const { ball } = gameState;
     const dt = 1 / 30;
@@ -253,10 +257,10 @@ function updateBallPosition(gameState, onGoal) {
     const fieldY_end = fieldY_start + gameState.fieldHeight;
 
     // Helper: Reflect velocity off a surface with given normal (nx, ny must be normalized)
-    function reflectBall(nx, ny) {
+    function reflectBall(nx, ny, energyLoss = BOUNCE_ENERGY_LOSS) {
         const dot = ball.vx * nx + ball.vy * ny;
-        ball.vx = (ball.vx - 2 * dot * nx) * BOUNCE_ENERGY_LOSS;
-        ball.vy = (ball.vy - 2 * dot * ny) * BOUNCE_ENERGY_LOSS;
+        ball.vx = (ball.vx - 2 * dot * nx) * energyLoss;
+        ball.vy = (ball.vy - 2 * dot * ny) * energyLoss;
         // Spin from tangential velocity
         const tangentVel = ball.vx * (-ny) + ball.vy * nx;
         if (Math.abs(tangentVel) > 200) {
@@ -308,13 +312,13 @@ function updateBallPosition(gameState, onGoal) {
         // Top border
         if (ball.y + ball.size > goalYStart && ball.y < goalYStart && ball.vy > 0) {
             ball.y = goalYStart - ball.size;
-            reflectBall(0, -1);
+            reflectBall(0, -1, NET_ENERGY_ABSORPTION);
             soundEvents.push({type: 'netHit'})
         }
         // Bottom border
         else if (ball.y - ball.size < goalYEnd && ball.y > goalYEnd && ball.vy < 0) {
             ball.y = goalYEnd + ball.size;
-            reflectBall(0, 1);
+            reflectBall(0, 1, NET_ENERGY_ABSORPTION);
             soundEvents.push({type: 'netHit'})
         }
     }
@@ -324,13 +328,13 @@ function updateBallPosition(gameState, onGoal) {
         // Top border
         if (ball.y + ball.size > goalYStart && ball.y < goalYStart && ball.vy > 0) {
             ball.y = goalYStart - ball.size;
-            reflectBall(0, -1);
+            reflectBall(0, -1, NET_ENERGY_ABSORPTION);
             soundEvents.push({type: 'netHit'})
         }
         // Bottom border
         else if (ball.y - ball.size < goalYEnd && ball.y > goalYEnd && ball.vy < 0) {
             ball.y = goalYEnd + ball.size;
-            reflectBall(0, 1);
+            reflectBall(0, 1, NET_ENERGY_ABSORPTION);
             soundEvents.push({type: 'netHit'})
         }
     }
@@ -344,7 +348,9 @@ function updateBallPosition(gameState, onGoal) {
             if (ball.x - ball.size < 0) { // Goal line
                 soundEvents.push({type: 'netHit'});
                 onGoal('team2');
-                return soundEvents;
+                // Bounce off back of goal
+                ball.x = ball.size;
+                reflectBall(1, 0, NET_ENERGY_ABSORPTION);
             }
         } else {
             ball.x = fieldX_start + ball.size;
@@ -357,23 +363,14 @@ function updateBallPosition(gameState, onGoal) {
             if (ball.x + ball.size > gameState.canvasWidth) { // Goal line
                 soundEvents.push({type: 'netHit'});
                 onGoal('team1');
-                return soundEvents;
+                // Bounce off back of goal
+                ball.x = gameState.canvasWidth - ball.size;
+                reflectBall(-1, 0, NET_ENERGY_ABSORPTION);
             }
         } else {
             ball.x = fieldX_end - ball.size;
             reflectBall(-1, 0);
         }
-    }
-    // Canvas boundaries (back of goal areas) - prevent ball from going off-screen
-    if (ball.x - ball.size < 0) {
-        ball.x = ball.size;
-        reflectBall(1, 0);
-        soundEvents.push({type: 'netHit'});
-    }
-    if (ball.x + ball.size > gameState.canvasWidth) {
-        ball.x = gameState.canvasWidth - ball.size;
-        reflectBall(-1, 0);
-        soundEvents.push({type: 'netHit'});
     }
     // Top wall
     if (ball.y - ball.size < fieldY_start) {
@@ -410,7 +407,6 @@ function checkCollisions(gameState) {
 
                 // --- Stats Tracking ---
                 handleBallTouch(gameState, player);
-                // --------------------
 
                 const isHead = player.body.indexOf(segment) === 0;
                 const isBoostKick = isHead && player.isMoving && player.headbuttActive > 0;
@@ -647,6 +643,7 @@ async function createGameState(players, room) {
 }
 
 function resumeAfterKickoff(gameState) {
+    gameState.kickOff = false;
     gameState.isPausedForGoal = false;
     gameState.goalScoredBy = null;
 }
