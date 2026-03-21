@@ -244,10 +244,21 @@ function updateBallPosition(gameState, onGoal) {
     const { ball } = gameState;
     const dt = 1 / 30;
 
-    ball.vx *= BALL_FRICTION;
-    ball.vy *= BALL_FRICTION;
-    
     const currentSpeed = Math.hypot(ball.vx, ball.vy);
+    
+    // Progressive friction: increases as ball slows down (grass-like behavior)
+    // At high speeds: use base friction, at low speeds: friction increases
+    const speedFactor = Math.min(currentSpeed / 300, 1); // 0 at rest, 1 at 300+ speed
+    const dynamicFriction = BALL_FRICTION - (1 - speedFactor) * 0.035; // More friction at low speeds
+    
+    ball.vx *= dynamicFriction;
+    ball.vy *= dynamicFriction;
+    
+    // Stop completely at very low speeds to prevent endless micro-movement
+    if (currentSpeed < 10) {
+        ball.vx *= 0.85;
+        ball.vy *= 0.85;
+    }
     
     // Dissipate spin more aggressively at low speeds to prevent perpetual motion
     if (currentSpeed > 50) {
