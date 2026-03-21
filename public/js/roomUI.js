@@ -91,22 +91,24 @@ socket.on('kickoff-countdown', ({ count }) => {
 socket.on('sound-events', (events) => {
     if (!window.SoundManager) return;
     for (const event of events) {
-        if (event.type === 'ballKick') {
-            window.SoundManager.playBallKick(event.isBoost);
-        } else if (event.type === 'hitPost') {
-            window.SoundManager.playHitPost(event.isHardHit);
-        } else if (event.type === 'netHit') {
-            window.SoundManager.playNetHit();
-        } else if (event.type === 'countdown') {
-            window.SoundManager.playCountdown(event.isDramatic);
-        } else if (event.type === 'whistle') {
-            window.SoundManager.playWhistle();
-        } else if (event.type === 'countdownControl') {
-            if (event.action === 'pause') {
-                window.SoundManager.pauseCountdown();
-            } else if (event.action === 'resume') {
-                window.SoundManager.resumeCountdown();
-            }
+        switch (event.type) {
+            case 'ballKick':
+                window.SoundManager.playBallKick(event.isBoost); break;
+            case 'hitPost':
+                window.SoundManager.playHitPost(event.isHardHit); break;
+            case 'netHit':
+                window.SoundManager.playNetHit(); break;
+            case 'countdown':
+                window.SoundManager.playCountdown(event.isDramatic); break;
+            case 'whistle':
+                window.SoundManager.playWhistle(); break;
+            case 'countdownControl':
+                if (event.action === 'pause') {
+                    window.SoundManager.pauseCountdown();
+                } else if (event.action === 'resume') {
+                    window.SoundManager.resumeCountdown();
+                }
+                break;
         }
     }
 });
