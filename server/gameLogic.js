@@ -8,6 +8,7 @@ const BOUNCE_ENERGY_LOSS = 0.8;
 const NET_ENERGY_ABSORPTION = 0.2; // Energy retained when hitting the goal net
 const HIT_COOLDOWN_FRAMES = 3;
 const MAGNUS_EFFECT_STRENGTH = 3.00; // Strength of spin effect on trajectory
+const MAX_SPIN = 3.0; // Maximum spin value to prevent excessive rotation
 
 // Snake Constants
 const SNAKE_SIZE = 20;
@@ -249,11 +250,14 @@ function updateBallPosition(gameState, onGoal) {
     const currentSpeed = Math.hypot(ball.vx, ball.vy);
     
     // Dissipate spin more aggressively at low speeds to prevent perpetual motion
-    if (currentSpeed > 100) {
-        ball.spin = (ball.spin || 0) * 0.955; // Faster decay at low speeds
+    if (currentSpeed > 50) {
+        ball.spin = (ball.spin || 0) * 0.955; // Faster decay
     } else {
-        ball.spin = (ball.spin || 0) * 0.975; // Normal decay
+        ball.spin = (ball.spin || 0) * 0.985; // Normal decay
     }
+    
+    // Clamp spin to maximum value
+    ball.spin = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, ball.spin));
     
     // Magnus effect: spin creates perpendicular force to velocity
     if (ball.spin && Math.abs(ball.spin) > 0.1) {
@@ -289,7 +293,7 @@ function updateBallPosition(gameState, onGoal) {
         // Spin from tangential velocity
         const tangentVel = ball.vx * (-ny) + ball.vy * nx;
         if (Math.abs(tangentVel) > 200) {
-            ball.spin += tangentVel * 0.003;
+            ball.spin += tangentVel * 0.002;
         }
     }
 
@@ -454,7 +458,7 @@ function checkCollisions(gameState) {
                     const tx = -ny;
                     const ty = nx;
                     const tangentVel = ball.vx * tx + ball.vy * ty;
-                    ball.spin += tangentVel * 0.012; // Spin from glancing hit
+                    ball.spin += tangentVel * 0.006; // Spin from glancing hit
 
                     const dot = ball.vx * nx + ball.vy * ny;
                     ball.vx = (ball.vx - 2 * dot * nx) * BOUNCE_ENERGY_LOSS;
@@ -474,7 +478,7 @@ function checkCollisions(gameState) {
                         player.direction === 'right' ? 1 : player.direction === 'left' ? -1 : 0
                     );
                     const angleDiff = angle - moveAngle;
-                    ball.spin += Math.sin(angleDiff) * hitSpeed * 0.003;
+                    ball.spin += Math.sin(angleDiff) * hitSpeed * 0.002;
 
                     // Combine current velocity with the hit velocity
                     const hitVx = Math.cos(angle) * hitSpeed;

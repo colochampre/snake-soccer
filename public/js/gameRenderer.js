@@ -3,6 +3,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
 const SEG = 20;
+const TEXTURE_SLIDE = 1.8;
 
 // === INTERPOLATION SYSTEM ===
 const SERVER_TICK_RATE = 1000 / 30; // 33.33ms between server updates
@@ -333,15 +334,16 @@ function drawBall(ball) {
     
     // Accumulate spin angle
     ballSpinAngle += (ball.spin / 2 || 0);
+    console.log(Math.abs(ball.spin));
     
     // Only decay towards 0 when spin is low
     if (ballSpeed > 50 && Math.abs(ball.spin || 0) < 0.1) {
         // Normalize angle to -PI to PI range so it decays to nearest 0
         ballSpinAngle = Math.atan2(Math.sin(ballSpinAngle), Math.cos(ballSpinAngle));
-        ballSpinAngle *= 0.975;
-    } else if (Math.abs(ball.spin || 0) < 0.01) {
+        ballSpinAngle *= 0.955;
+    } else if (Math.abs(ball.spin || 0) < 0.1) {
         ballSpinAngle = Math.atan2(Math.sin(ballSpinAngle), Math.cos(ballSpinAngle));
-        ballSpinAngle *= 0.995;
+        ballSpinAngle *= 0.975;
     }
 
     ctx.save();
@@ -350,7 +352,7 @@ function drawBall(ball) {
     ctx.translate(-ball.x, -ball.y);
 
     if (ballPattern && ballTexture.width > 0 && ballTexture.height > 0) {
-        const matrix = new DOMMatrix().translate(ball.x * 1.6, ball.y * 1.6);
+        const matrix = new DOMMatrix().translate(ball.x * TEXTURE_SLIDE, ball.y * TEXTURE_SLIDE);
         ballPattern.setTransform(matrix);
         ctx.fillStyle = ballPattern;
         ctx.beginPath();
