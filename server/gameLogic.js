@@ -458,10 +458,13 @@ function updateBallPosition(gameState, onGoal) {
     // Left wall
     if (ball.x - ball.size < fieldX_start) {
         if (ballInGoalZoneY) {
-            if (ball.x - ball.size < 0) { // Goal line
-                soundEvents.push({type: 'netHit'});
+            // Goal: ball completely crossed the line
+            if (ball.x + ball.size < fieldX_start) {
                 onGoal('team2');
-                // Bounce off back of goal
+            }
+            // Net hit: ball touches the back of the goal
+            if (ball.x - ball.size < 0) {
+                soundEvents.push({type: 'netHit'});
                 ball.x = ball.size;
                 reflectBall(1, 0, NET_ENERGY_ABSORPTION);
             }
@@ -474,10 +477,13 @@ function updateBallPosition(gameState, onGoal) {
     // Right wall
     if (ball.x + ball.size > fieldX_end) {
         if (ballInGoalZoneY) {
-            if (ball.x + ball.size > gameState.canvasWidth) { // Goal line
-                soundEvents.push({type: 'netHit'});
+            // Goal: ball completely crossed the line
+            if (ball.x - ball.size > fieldX_end) {
                 onGoal('team1');
-                // Bounce off back of goal
+            }
+            // Net hit: ball touches the back of the goal
+            if (ball.x + ball.size > gameState.canvasWidth) {
+                soundEvents.push({type: 'netHit'});
                 ball.x = gameState.canvasWidth - ball.size;
                 reflectBall(-1, 0, NET_ENERGY_ABSORPTION);
             }

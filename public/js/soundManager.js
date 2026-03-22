@@ -71,7 +71,7 @@ const SoundManager = {
     poolSize: 3,
 
     // Volume settings
-    masterVolume: 0.7,
+    masterVolume: 0.5,
     categoryVolumes: {
         ballKick: 1.0,
         countdown: 1.0
