@@ -39,34 +39,55 @@ block lobby-panel
                 p.text-center No hay salas disponibles
 
 block main
-    //- Mensaje de rotación (solo visible en portrait mode)
-    div.rotate-message
-        i.bi.bi-phone-landscape.flicker2
-        h2.flicker1 Gira tu dispositivo
-        p Para una mejor experiencia de juego.
-
-    //- Botones hamburguesa (solo visibles en móvil/tablet landscape)
-    button.hamburger-btn.left#lobbyToggle(aria-label="Toggle Lobby")
-        i.bi.bi-card-list
-    button.hamburger-btn.right#userToggle(aria-label="Toggle User Panel")
-        i.bi.bi-person-square
-
-    div.overlay#overlay
-
-    div.main-wrapper.panel
-        div#scoreboard
-            span#score 0 - 0
-            h1.main-title.flicker Snake Soccer
-            span#timer 0:00
-        div.canvas-wrapper
-            canvas#gameCanvas
+    div.main-wrapper.panel.ranking-panel
+        div.ranking-header
+            a.btn.back-btn(href="/") 
+                i.bi.bi-arrow-left
+                span Volver
+            h2.user-title.flicker2 Rankings
+        
+        div.ranking-table-container
+            table.ranking-table
+                thead
+                    tr
+                        th #
+                        th Jugador
+                        th Nivel
+                        th Partidas
+                        th V/D/E
+                        th Winrate
+                        th Goles
+                        th Asist.
+                tbody
+                    if rankings && rankings.length > 0
+                        each player, index in rankings
+                            tr(class=(player.username === user.username ? 'current-user' : ''))
+                                td.rank
+                                    if player.rank === 1
+                                        i.bi.bi-trophy-fill.gold
+                                    else if player.rank === 2
+                                        i.bi.bi-trophy-fill.silver
+                                    else if player.rank === 3
+                                        i.bi.bi-trophy-fill.bronze
+                                    else
+                                        span= player.rank
+                                td.username= player.username
+                                td.level= player.level
+                                td.matches= player.matches
+                                td.record= `${player.wins}/${player.losses}/${player.draws}`
+                                td.winrate= `${player.winrate}%`
+                                td.goals= player.goals
+                                td.assists= player.assists
+                    else
+                        tr
+                            td(colspan="8").text-center No hay jugadores con partidas aún
 
 block user-panel
     div.user-wrapper.panel#userPanel
         h2.user-title.flicker2 #{user.username}
         div.experience-container
             div.experience-bar-background
-                div#xpBarFill
+                div#xpBarFill(style=`width: ${userStats ? Math.min((userStats.currentLevelXp / userStats.xpToNextLevel) * 100, 100) : 0}%`)
             div.experience-info
                 p.experience-text
                     i.bi.bi-trophy 
@@ -83,12 +104,12 @@ block user-panel
                     a.btn.btn-primary.nav-link.w-100(href="/tasks")
                         i.bi.bi-clipboard-check
                         span Tareas
-        if user
-            div.nav-item
-                form(method="POST", action="/logout")
-                    button.btn.leave-btn.nav-link.w-100(type="submit")
-                        i.bi.bi-door-closed
-                        span Salir
+            if user
+                div.nav-item
+                    form(method="POST", action="/logout")
+                        button.btn.leave-btn.nav-link.w-100(type="submit")
+                            i.bi.bi-door-closed
+                            span Salir
 
         if user
             div.user-stats

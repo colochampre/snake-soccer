@@ -14,6 +14,7 @@ import authRouter from "./routes/authRouter.js";
 import taskRouter from "./routes/taskRouter.js";
 import roomRouter from "./routes/roomRouter.js";
 import roomController from "./controllers/roomController.js";
+import rankingRouter from "./routes/rankingRouter.js";
 import { setupRoomSocket } from "./server/roomSocket.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,6 +68,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(authRouter);
 app.use(roomRouter);
+app.use(rankingRouter);
 
 app.get("/test", (req, res) => {
     res.json({ 

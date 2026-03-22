@@ -4,8 +4,48 @@ socket.on('rooms-updated', (rooms) => {
     updateRoomList(rooms);
 });
 
+// Fetch and display user stats
+async function loadUserStats() {
+    try {
+        const response = await fetch('/api/user/stats');
+        if (!response.ok) {
+            console.error('Failed to load user stats:', response.status);
+            return;
+        }
+        
+        const stats = await response.json();
+        console.log('User stats loaded:', stats);
+        
+        // Update stats display
+        const statLevel = document.getElementById('statLevel');
+        const statGoals = document.getElementById('statGoals');
+        const statAssists = document.getElementById('statAssists');
+        const statMatches = document.getElementById('statMatches');
+        const statWinrate = document.getElementById('statWinrate');
+        const statXp = document.getElementById('statXp');
+        const xpBarFill = document.getElementById('xpBarFill');
+        
+        if (statLevel) statLevel.textContent = `Nivel: ${stats.level}`;
+        if (statGoals) statGoals.textContent = `Goles: ${stats.goals}`;
+        if (statAssists) statAssists.textContent = `Asistencias: ${stats.assists}`;
+        if (statMatches) statMatches.textContent = `Partidas: ${stats.matches}`;
+        if (statWinrate) statWinrate.textContent = `Winrate: ${stats.winrate}%`;
+        if (statXp) statXp.textContent = `${stats.currentLevelXp} / ${stats.xpToNextLevel}`;
+        
+        // Update XP bar
+        if (xpBarFill) {
+            const xpPercent = Math.min((stats.currentLevelXp / stats.xpToNextLevel) * 100, 100);
+            xpBarFill.style.width = `${xpPercent}%`;
+        }
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+    }
+}
+
 // Ball selector functionality
 document.addEventListener('DOMContentLoaded', () => {
+    // Load user stats on page load
+    loadUserStats();
     const ballSelector = document.querySelector('.ball-selector');
     const ballDisplay = document.querySelector('.ball-selector-display');
     const ballDropdown = document.querySelector('.ball-selector-dropdown');

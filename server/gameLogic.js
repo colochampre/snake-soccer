@@ -1,4 +1,4 @@
-import { getPlayerStats, getXpToNextLevel } from './database.js';
+import playerStatsModel, { getXpToNextLevel, getCurrentLevelXp } from '../models/playerStatsModel.js';
 
 // Ball Constants
 const BALL_SIZE = 15;
@@ -741,8 +741,11 @@ function handleDirectionChange(gameState, playerId, direction) {
 }
 
 async function createGameState(players, room) {
-    const playerStatsPromises = Object.values(players).map(player => getPlayerStats(player.username));
-    const playerStats = await Promise.all(playerStatsPromises);
+    const playerStatsPromises = Object.values(players).map(async player => {
+        const stats = await playerStatsModel.getByUsername(player.username);
+        return { username: player.username, stats };
+    });
+    const playerStatsResults = await Promise.all(playerStatsPromises);
 
     const gameState = {
         room: room,
@@ -752,14 +755,25 @@ async function createGameState(players, room) {
         gameTime: room.gameTime
     };
 
-    playerStats.forEach(stats => {
-        const player = Object.values(players).find(p => p.username === stats.username);
+    playerStatsResults.forEach(({ username, stats }) => {
+        const player = Object.values(players).find(p => p.username === username);
         if (player) {
+            const level = stats?.level || 1;
+            const xp = stats?.xp || 0;
             gameState.players[player.id] = {
                 ...player,
                 stats: {
-                    ...stats,
-                    xpToNextLevel: getXpToNextLevel(stats.level) // Añadir la experiencia para el siguiente nivel
+                    level,
+                    xp,
+                    goals: stats?.goals || 0,
+                    assists: stats?.assists || 0,
+                    matches: stats?.matches || 0,
+                    wins: stats?.wins || 0,
+                    losses: stats?.losses || 0,
+                    draws: stats?.draws || 0,
+                    xpToNextLevel: getXpToNextLevel(level),
+                    currentLevelXp: getCurrentLevelXp(xp),
+                    winrate: stats?.matches > 0 ? Math.round((stats.wins / stats.matches) * 100 * 10) / 10 : 0
                 }
             };
         }

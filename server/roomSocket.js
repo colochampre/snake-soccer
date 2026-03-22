@@ -1,4 +1,6 @@
 import roomController from "../controllers/roomController.js";
+import playerStatsModel from "../models/playerStatsModel.js";
+import userModel from "../models/userModel.js";
 import {
     createInitialState,
     addPlayer,
@@ -11,6 +13,58 @@ import {
 } from './gameLogic.js';
 
 const roomIntervals = new Map();
+
+// XP rewards configuration
+const XP_REWARDS = {
+    WIN: 100,
+    DRAW: 50,
+    LOSS: 25,
+    GOAL: 20,
+    ASSIST: 10
+};
+
+async function saveMatchStats(finalState, room) {
+    try {
+        const { playerMatchStats, winner, teams } = finalState;
+        
+        for (const [playerId, matchStats] of Object.entries(playerMatchStats)) {
+            const { username, goals, assists } = matchStats;
+            
+            // Get user from database
+            const user = await userModel.findByUsername(username);
+            if (!user) continue;
+            
+            // Determine win/loss/draw for this player
+            const playerTeam = teams.team1.includes(playerId) ? 'team1' : 'team2';
+            const isWin = winner === playerTeam;
+            const isDraw = winner === 'draw';
+            const isLoss = !isWin && !isDraw;
+            
+            // Calculate XP gained
+            let xpGained = 0;
+            if (isWin) xpGained += XP_REWARDS.WIN;
+            else if (isDraw) xpGained += XP_REWARDS.DRAW;
+            else xpGained += XP_REWARDS.LOSS;
+            
+            xpGained += goals * XP_REWARDS.GOAL;
+            xpGained += assists * XP_REWARDS.ASSIST;
+            
+            // Update stats in database
+            await playerStatsModel.updateStats(user.id, {
+                goals,
+                assists,
+                isWin,
+                isLoss,
+                isDraw,
+                xpGained
+            });
+            
+            console.log(`Stats saved for ${username}: goals=${goals}, assists=${assists}, xp=${xpGained}`);
+        }
+    } catch (error) {
+        console.error('Error saving match stats:', error);
+    }
+}
 
 function serializeGameState(state) {
     const players = {};
@@ -79,7 +133,7 @@ function launchGame(roomId, room, io) {
         }
     };
 
-    const onEnd = (finalState) => {
+    const onEnd = async (finalState) => {
         io.to(roomId).emit('game-over', {
             score: finalState.score,
             winner: finalState.winner,
@@ -91,6 +145,11 @@ function launchGame(roomId, room, io) {
             clearInterval(ri.game);
             clearInterval(ri.timer);
             roomIntervals.delete(roomId);
+        }
+
+        // Save stats to database (skip practice mode)
+        if (room.mode !== 'practica') {
+            await saveMatchStats(finalState, room);
         }
     };
 
