@@ -60,6 +60,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ThemeManager.init();
 
+    // Fullscreen toggle button
+    const fullscreenToggleBtn = document.getElementById('fullscreenToggle');
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            // Entrar a fullscreen
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => {
+                    console.log('Fullscreen no disponible:', err);
+                });
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        } else {
+            // Salir de fullscreen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    }
+
+    function updateFullscreenIcon() {
+        if (fullscreenToggleBtn) {
+            const icon = fullscreenToggleBtn.querySelector('i');
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                icon.className = 'bi bi-fullscreen-exit';
+            } else {
+                icon.className = 'bi bi-fullscreen';
+            }
+        }
+    }
+
+    if (fullscreenToggleBtn) {
+        fullscreenToggleBtn.addEventListener('click', toggleFullscreen);
+    }
+
+    // Actualizar icono cuando cambia el estado de fullscreen
+    document.addEventListener('fullscreenchange', updateFullscreenIcon);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+    document.addEventListener('msfullscreenchange', updateFullscreenIcon);
+
     const themeToggleBtn = document.getElementById('themeToggle');
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', (e) => {
