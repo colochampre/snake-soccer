@@ -96,6 +96,8 @@ const goalBallIcon = new Image();
 goalBallIcon.src = '/img/ball-icon.svg';
 const goalAssistIcon = new Image();
 goalAssistIcon.src = '/img/high-five-icon.svg';
+const goalCrosshairIcon = new Image();
+goalCrosshairIcon.src = '/img/crosshair-icon.svg';
 
 const BALL_TEXTURE_MAP = {
     'texture-1': '/img/ball-base-1.png',
@@ -294,7 +296,7 @@ function renderGame(state) {
             rowY += lineH;
         }
 
-        drawGoalRow(goalBallIcon, '¡GOL!', teamColor, 1.5, true);
+        drawGoalRow('', '¡GOL!', teamColor, 1.5, true);
         if (hasScorer) {
             drawGoalRow(goalBallIcon, state.goalScorerUsername, '#ddd', 1, true);
         }

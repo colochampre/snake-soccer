@@ -25,12 +25,12 @@ async function loadUserStats() {
         const statXp = document.getElementById('statXp');
         const xpBarFill = document.getElementById('xpBarFill');
         
-        if (statLevel) statLevel.textContent = `Nivel: ${stats.level}`;
-        if (statGoals) statGoals.textContent = `Goles: ${stats.goals}`;
-        if (statAssists) statAssists.textContent = `Asistencias: ${stats.assists}`;
-        if (statMatches) statMatches.textContent = `Partidas: ${stats.matches}`;
-        if (statWinrate) statWinrate.textContent = `Winrate: ${stats.winrate}%`;
-        if (statXp) statXp.textContent = `${stats.currentLevelXp} / ${stats.xpToNextLevel}`;
+        if (statLevel) statLevel.textContent = `Lvl ${stats.level}`;
+        if (statGoals) statGoals.innerHTML = `Goles: <span class="stat-value">${stats.goals}</span>`;
+        if (statAssists) statAssists.innerHTML = `Asistencias: <span class="stat-value">${stats.assists}</span>`;
+        if (statMatches) statMatches.innerHTML = `Partidas: <span class="stat-value">${stats.matches}</span>`;
+        if (statWinrate) statWinrate.innerHTML = `Winrate: <span class="stat-value">${stats.winrate}%</span>`;
+        if (statXp) statXp.innerHTML = `${stats.currentLevelXp}/${stats.xpToNextLevel} XP`;
         
         // Update XP bar
         if (xpBarFill) {
@@ -149,7 +149,7 @@ function createRoomCard(room) {
     
     const ball = document.createElement('span');
     ball.className = 'room-ball';
-    ball.innerHTML = `<i class="bi bi-circle-fill"></i> ${room.ball}`;
+    ball.innerHTML = `<span class="ball-option" data-ball="${room.ball}"></span>`;
     
     info.appendChild(mode);
     info.appendChild(duration);

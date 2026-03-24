@@ -153,18 +153,18 @@ socket.on('game-over', (data) => {
                 <thead>
                     <tr>
                         <th>Jugador</th>
-                        <th title="Goles"><span class="stat-icon stat-icon-goal"></span></th>
-                        <th title="Asistencias"><span class="stat-icon stat-icon-assist"></span></th>
-                        <th title="Toques"><i class="bi bi-crosshair"></i></th>
+                        <th title="Goles"><span class="stat-icon stat-icon-goal"> Goles</span></th>
+                        <th title="Asistencias"><span class="stat-icon stat-icon-assist"> Asistencias</span></th>
+                        <th title="Toques"><span class="stat-icon stat-icon-crosshair"> Toques</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     ${stats.map(s => `
                         <tr>
                             <td>${s.username}</td>
-                            <td>${s.goals}</td>
-                            <td>${s.assists}</td>
-                            <td>${s.touches}</td>
+                            <td class="stat-value">${s.goals}</td>
+                            <td class="stat-value">${s.assists}</td>
+                            <td class="stat-value">${s.touches}</td>
                         </tr>
                     `).join('')}
                 </tbody>

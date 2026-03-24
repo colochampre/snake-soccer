@@ -21,6 +21,7 @@
     display: flex;
     flex-direction: row;
     justify-content: space-around;
+    gap: 2rem
 }
 
 .room-settings p {
@@ -398,9 +399,11 @@
 
 .game-over-stats {
     width: 100%;
+    min-width: 400px;
     max-height: 220px;
     padding-right: .5rem;
     overflow-y: auto;
+    overflow-x: hidden;
     margin: 0.25rem 0;
 }
 
@@ -426,6 +429,11 @@
 .stat-icon-assist {
     -webkit-mask-image: url('/img/high-five-icon.svg');
     mask-image: url('/img/high-five-icon.svg');
+}
+
+.stat-icon-crosshair {
+    -webkit-mask-image: url('/img/crosshair-icon.svg');
+    mask-image: url('/img/crosshair-icon.svg');
 }
 
 .stats-table {

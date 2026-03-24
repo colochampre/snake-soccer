@@ -1,0 +1,103 @@
+/* ==========================
+    RANKING PAGE
+========================== */
+
+.ranking-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.back-btn {
+    position: absolute;
+    left: 1rem;
+}
+
+.ranking-header h2 {
+    margin: 0;
+}
+
+.ranking-table-container {
+    position: relative;
+    max-height: 50vh;
+    padding-right: 0.5rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.ranking-table th,
+.ranking-table td {
+    padding: 0.25rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--bg-secondary);
+}
+
+.ranking-table th {
+    color: var(--main-color);
+    font-weight: normal;
+    font-size: 0.8rem;
+    border-bottom: 2px solid var(--main-color);
+}
+
+.ranking-table td {
+    color: var(--text-primary);
+    font-family: 'Better VCR';
+}
+
+.ranking-table td.rank {
+    font-size: 0.8rem;
+}
+
+.ranking-table td.username {
+    text-align: left;
+    font-weight: bold;
+    font-family: var(--main-font);
+}
+
+.ranking-table tbody tr:hover {
+    background-color: var(--bg-secondary);
+}
+
+.ranking-table tbody tr.current-user {
+    background-color: rgba(var(--main-color-rgb), 0.15);
+}
+
+.ranking-table tbody tr.current-user td {
+    color: var(--main-color);
+}
+
+.ranking-table .gold {
+    color: #FFD700;
+    font-size: 1rem;
+}
+
+.ranking-table .silver {
+    color: #C0C0C0;
+    font-size: 1rem;
+}
+
+.ranking-table .bronze {
+    color: #CD7F32;
+    font-size: 1rem;
+}
+
+.rank-number {
+    font-family: 'Better VCR', sans-serif;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 1535px) and (orientation: landscape) {
+    .ranking-header, .ranking-table-container {
+        max-width: 650px;
+    }
+}

@@ -69,10 +69,10 @@ block user-panel
                 div#xpBarFill
             div.experience-info
                 p.experience-text
-                    i.bi.bi-trophy 
-                    span#statLevel Nivel: 1
+                    include partials/level-up.svg 
+                    span#statLevel Lvl 1
                 p.experience-text
-                    span#statXp 0 / 0
+                    span#statXp 0/0 XP
         div.nav-list
             div.nav-item
                 button.btn.btn-primary.nav-link.w-100#themeToggle(type="button")
@@ -93,13 +93,13 @@ block user-panel
         if user
             div.user-stats
                 p
-                    i.bi.bi-bullseye 
-                    span#statGoals Goles: 0
+                    include partials/ball-icon.svg 
+                    span#statGoals Goles: 0 
                 p
-                    i.bi.bi-hand-thumbs-up 
+                    include partials/high-five.svg 
                     span#statAssists Asistencias: 0
                 p
-                    i.bi.bi-controller 
+                    i.bi.bi-joystick 
                     span#statMatches Partidas: 0
                 p
                     i.bi.bi-graph-up 

@@ -1,4 +1,6 @@
 extends layout
+block styles
+    link(rel="stylesheet", href="/css/ranking.css")
 
 block lobby-panel
     div.lobby-wrapper.panel#lobbyPanel
@@ -39,6 +41,20 @@ block lobby-panel
                 p.text-center No hay salas disponibles
 
 block main
+    //- Mensaje de rotación (solo visible en portrait mode)
+    div.rotate-message
+        i.bi.bi-phone-landscape.flicker2
+        h2.flicker1 Gira tu dispositivo
+        p Para una mejor experiencia de juego.
+
+    //- Botones hamburguesa (solo visibles en móvil/tablet landscape)
+    button.hamburger-btn.left#lobbyToggle(aria-label="Toggle Lobby")
+        i.bi.bi-card-list
+    button.hamburger-btn.right#userToggle(aria-label="Toggle User Panel")
+        i.bi.bi-person-square
+
+    div.overlay#overlay
+
     div.main-wrapper.panel.ranking-panel
         div.ranking-header
             a.btn.back-btn(href="/") 
@@ -64,13 +80,13 @@ block main
                             tr(class=(player.username === user.username ? 'current-user' : ''))
                                 td.rank
                                     if player.rank === 1
-                                        i.bi.bi-trophy-fill.gold
+                                        i.bi.bi-trophy.gold
                                     else if player.rank === 2
-                                        i.bi.bi-trophy-fill.silver
+                                        i.bi.bi-trophy.silver
                                     else if player.rank === 3
-                                        i.bi.bi-trophy-fill.bronze
+                                        i.bi.bi-trophy.bronze
                                     else
-                                        span= player.rank
+                                        span.rank-number= player.rank
                                 td.username= player.username
                                 td.level= player.level
                                 td.matches= player.matches
@@ -87,13 +103,13 @@ block user-panel
         h2.user-title.flicker2 #{user.username}
         div.experience-container
             div.experience-bar-background
-                div#xpBarFill(style=`width: ${userStats ? Math.min((userStats.currentLevelXp / userStats.xpToNextLevel) * 100, 100) : 0}%`)
+                div#xpBarFill
             div.experience-info
                 p.experience-text
-                    i.bi.bi-trophy 
-                    span#statLevel Nivel: 1
+                    include partials/level-up.svg 
+                    span#statLevel Lvl 1
                 p.experience-text
-                    span#statXp 0 / 0
+                    span#statXp 0/0 XP
         div.nav-list
             div.nav-item
                 button.btn.btn-primary.nav-link.w-100#themeToggle(type="button")
@@ -104,23 +120,23 @@ block user-panel
                     a.btn.btn-primary.nav-link.w-100(href="/tasks")
                         i.bi.bi-clipboard-check
                         span Tareas
-            if user
-                div.nav-item
-                    form(method="POST", action="/logout")
-                        button.btn.leave-btn.nav-link.w-100(type="submit")
-                            i.bi.bi-door-closed
-                            span Salir
+        if user
+            div.nav-item
+                form(method="POST", action="/logout")
+                    button.btn.leave-btn.nav-link.w-100(type="submit")
+                        i.bi.bi-door-closed
+                        span Salir
 
         if user
             div.user-stats
                 p
-                    i.bi.bi-bullseye 
-                    span#statGoals Goles: 0
+                    include partials/ball-icon.svg 
+                    span#statGoals Goles: 0 
                 p
-                    i.bi.bi-hand-thumbs-up 
+                    include partials/high-five.svg 
                     span#statAssists Asistencias: 0
                 p
-                    i.bi.bi-controller 
+                    i.bi.bi-joystick 
                     span#statMatches Partidas: 0
                 p
                     i.bi.bi-graph-up 
