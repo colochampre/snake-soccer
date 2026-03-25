@@ -533,6 +533,14 @@
     line-height: 1;
 }
 
+#ping {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-family: 'Better VCR';
+    font-size: 0.8rem !important;
+}
+
 /* ==========================
     MEDIA QUERIES - MOBILE & TABLET (LANDSCAPE MODE)
 ========================== */
