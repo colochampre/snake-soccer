@@ -32,7 +32,7 @@ function broadcastRoomList() {
 const roomController = {
     createRoom: async (req, res) => {
         try {
-            const { private: isPrivate, duration, mode, ball } = req.body;
+            const { private: isPrivate, duration, mode, ball, hostCountry } = req.body;
             const roomId = generateRoomId();
             const roomData = {
                 id: roomId,
@@ -40,10 +40,12 @@ const roomController = {
                 duration: parseInt(duration) || 120,
                 mode: mode || '1vs1',
                 ball: ball || 'texture-1',
+                hostCountry: hostCountry || null,
                 createdAt: Date.now(),
                 players: [],
                 teamNames: { team1: 'Equipo A', team2: 'Equipo B' },
-                gameState: null
+                gameState: null,
+                useP2P: true
             };
             rooms.set(roomId, roomData);
             broadcastRoomList();
@@ -128,6 +130,7 @@ const roomController = {
                     mode: room.mode,
                     duration: room.duration,
                     ball: room.ball,
+                    hostCountry: room.hostCountry,
                     playerCount: room.players.length,
                     maxPlayers: getMaxPlayers(room.mode),
                     createdAt: room.createdAt

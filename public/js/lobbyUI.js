@@ -4,6 +4,23 @@ socket.on('rooms-updated', (rooms) => {
     updateRoomList(rooms);
 });
 
+// Detect host country for P2P room creation
+async function detectHostCountry() {
+    try {
+        const response = await fetch('/api/geo');
+        if (response.ok) {
+            const data = await response.json();
+            const hostCountryInput = document.getElementById('hostCountry');
+            if (hostCountryInput && data.country_code) {
+                hostCountryInput.value = data.country_code.toLowerCase();
+            }
+        }
+    } catch (e) {
+        console.log('Could not detect country:', e);
+    }
+}
+detectHostCountry();
+
 // Fetch and display user stats
 async function loadUserStats() {
     try {
@@ -121,10 +138,12 @@ function createRoomCard(room) {
     
     const roomId = document.createElement('span');
     roomId.className = 'room-id';
-    roomId.textContent = `#${room.id}`;
+    roomId.title = 'ID de la sala';
+    roomId.textContent = `#${room.id.toString().toUpperCase()}`;
     
     const playerCount = document.createElement('span');
     playerCount.className = 'room-players';
+    playerCount.title = 'Jugadores en la sala';
     const maxPlayersText = room.maxPlayers ? `/${room.maxPlayers}` : '';
     playerCount.innerHTML = `<i class="bi bi-people-fill"></i> ${room.playerCount}${maxPlayersText}`;
     
@@ -133,22 +152,34 @@ function createRoomCard(room) {
     }
     
     header.appendChild(roomId);
+    
     header.appendChild(playerCount);
+    // Host country flag
+    if (room.hostCountry) {
+        const flag = document.createElement('span');
+        flag.className = 'room-flag';
+        flag.innerHTML = `<span class="fi fi-${room.hostCountry.toLowerCase()}"></span>`;
+        flag.title = `Host: ${room.hostCountry.toUpperCase()}`;
+        header.appendChild(flag);
+    }
     
     const info = document.createElement('div');
     info.className = 'room-card-info';
     
     const mode = document.createElement('span');
     mode.className = 'room-mode';
-    mode.innerHTML = `<i class="bi bi-joystick"></i> ${room.mode}`;
+    mode.title = 'Modo de juego';
+    mode.innerHTML = `<i class="bi bi-joystick"> </i> ${room.mode}`;
     
     const duration = document.createElement('span');
     duration.className = 'room-duration';
+    duration.title = 'Duración de la partida';
     const minutes = Math.floor(room.duration / 60);
     duration.innerHTML = `<i class="bi bi-clock"></i> ${minutes}m`;
     
     const ball = document.createElement('span');
     ball.className = 'room-ball';
+    ball.title = 'Pelota seleccionada';
     ball.innerHTML = `<span class="ball-option" data-ball="${room.ball}"></span>`;
     
     info.appendChild(mode);

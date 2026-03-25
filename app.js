@@ -79,6 +79,31 @@ app.get("/test", (req, res) => {
     });
 });
 
+// Endpoint para detectar país del usuario (para P2P)
+app.get("/api/geo", async (req, res) => {
+    try {
+        // En localhost, devolver país por defecto
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+        const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === '::ffff:127.0.0.1';
+        
+        if (isLocalhost) {
+            return res.json({ country_code: 'ar' }); // Default para desarrollo local
+        }
+
+        // En producción, usar servicio de geolocalización
+        const response = await fetch(`https://ipapi.co/${clientIp}/json/`);
+        if (response.ok) {
+            const data = await response.json();
+            return res.json({ country_code: (data.country_code || 'ar').toLowerCase() });
+        }
+        
+        res.json({ country_code: 'ar' });
+    } catch (e) {
+        console.error('Geo detection error:', e);
+        res.json({ country_code: 'ar' });
+    }
+});
+
 app.get("/", auth.requireAuth, (req, res) => {
     res.render("index", { title: "Snake Soccer", user: req.user });
 });

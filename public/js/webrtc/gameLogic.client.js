@@ -1,0 +1,708 @@
+// Client-side Game Logic for P2P Host
+// Adapted from server/gameLogic.js for browser execution
+
+// Ball Constants
+const BALL_SIZE = 15;
+const BALL_FRICTION = 0.98;
+const BALL_HIT_SPEED = 400;
+const BOUNCE_ENERGY_LOSS = 0.8;
+const NET_ENERGY_ABSORPTION = 0.2;
+const HIT_COOLDOWN_FRAMES = 3;
+const MAGNUS_EFFECT_STRENGTH = 3.00;
+const MAX_SPIN = 3.0;
+
+// Snake Constants
+const SNAKE_SIZE = 20;
+const SNAKE_SPEED = 300;
+const HEADBUTT_SPEED_BOOST = 500;
+const HEADBUTT_BALL_HIT_SPEED = 800;
+const HEADBUTT_DURATION_FRAMES = 10;
+const HEADBUTT_COOLDOWN = 30;
+
+export function createInitialState(duration = 300, mode = '1vs1', teamNames = { team1: 'Equipo 1', team2: 'Equipo 2' }) {
+    const state = {
+        players: {},
+        ball: {},
+        score: { team1: 0, team2: 0 },
+        teams: { team1: [], team2: [] },
+        teamNames: teamNames,
+        mode: mode,
+        timeLeft: duration,
+        isGameOver: true,
+        gameStarted: false,
+        winner: null,
+        isPausedForGoal: false,
+        kickOff: true,
+        goalScoredBy: null,
+        countdownActive: false,
+        lastTouchedBy: { team1: [null, null], team2: [null, null] },
+        playerMatchStats: {},
+        canvasWidth: 1281,
+        canvasHeight: 721,
+        goalHeight: 151,
+    };
+
+    switch (mode) {
+        case '2vs2':
+            state.canvasWidth = 1577;
+            state.canvasHeight = 887;
+            state.goalHeight = 185;
+            break;
+        case '3vs3':
+            state.canvasWidth = 1875;
+            state.canvasHeight = 1055;
+            state.goalHeight = 219;
+            break;
+    }
+
+    const MARGIN = 40;
+    state.fieldWidth = state.canvasWidth - MARGIN * 2;
+    state.fieldHeight = state.canvasHeight - MARGIN * 2;
+
+    return state;
+}
+
+function createPlayer(id, color, team, username) {
+    return {
+        id: id,
+        username: username,
+        body: [],
+        direction: 'stop',
+        color: color,
+        team: team,
+        hitCooldown: 0,
+        headbuttActive: 0,
+        headbuttCooldown: 0,
+        isMoving: false,
+        isReady: false
+    };
+}
+
+export function addPlayer(gameState, playerId, username, forcedTeam = null, forcedColor = null) {
+    let assignedTeam;
+    if (forcedTeam) {
+        assignedTeam = forcedTeam;
+        gameState.teams[forcedTeam].push(playerId);
+    } else {
+        const team1Count = gameState.teams.team1.length;
+        const team2Count = gameState.teams.team2.length;
+        assignedTeam = team1Count <= team2Count ? 'team1' : 'team2';
+        gameState.teams[assignedTeam].push(playerId);
+    }
+
+    const color = forcedColor || (assignedTeam === 'team1' ? '#FF4136' : '#0074D9');
+    gameState.players[playerId] = createPlayer(playerId, color, assignedTeam, username);
+
+    const prevEntry = Object.entries(gameState.playerMatchStats).find(([, s]) => s.username === username);
+    if (prevEntry) {
+        const [prevId, prevStats] = prevEntry;
+        gameState.playerMatchStats[playerId] = { ...prevStats };
+        delete gameState.playerMatchStats[prevId];
+    } else {
+        gameState.playerMatchStats[playerId] = { username, goals: 0, assists: 0, touches: 0 };
+    }
+
+    return assignedTeam;
+}
+
+export function removePlayer(gameState, playerId) {
+    gameState.teams.team1 = gameState.teams.team1.filter(id => id !== playerId);
+    gameState.teams.team2 = gameState.teams.team2.filter(id => id !== playerId);
+    delete gameState.players[playerId];
+}
+
+export function startGame(gameState, callbacks) {
+    const { onUpdate, onEnd, onGoalScored, onCountdown, onCountdownPause } = callbacks;
+    
+    console.log(`[P2P Host] Starting game with duration: ${gameState.timeLeft}s`);
+
+    gameState.score = { team1: 0, team2: 0 };
+    gameState.isGameOver = false;
+    gameState.gameStarted = true;
+    gameState.winner = null;
+    gameState.isPausedForGoal = false;
+    gameState.goalScoredBy = null;
+
+    resetBall(gameState);
+    gameState.kickOff = false;
+
+    const intervals = { game: null, timer: null };
+
+    intervals.game = setInterval(() => gameLoop(gameState, onUpdate, onEnd, onGoalScored, onCountdownPause), 1000 / 30);
+    intervals.timer = setInterval(() => {
+        if (gameState.isGameOver || gameState.isPausedForGoal || gameState.kickOff) {
+            return;
+        }
+
+        gameState.timeLeft--;
+        
+        if (onCountdown && gameState.timeLeft === 11) {
+            const scoreDiff = Math.abs(gameState.score.team1 - gameState.score.team2);
+            const isDramatic = scoreDiff <= 1;
+            
+            if (isDramatic) {
+                gameState.countdownActive = true;
+                onCountdown({ isDramatic: true });
+            } else {
+                const delayMs = 2100;
+                setTimeout(() => {
+                    if (!gameState.isGameOver) {
+                        gameState.countdownActive = true;
+                        onCountdown({ isDramatic: false });
+                    }
+                }, delayMs);
+            }
+        }
+        
+        if (gameState.timeLeft < 0) {
+            const finalState = endGame(gameState, 'time');
+            onEnd(finalState);
+        }
+    }, 1000);
+
+    return intervals;
+}
+
+export function endGame(gameState, reason) {
+    if (gameState.isGameOver) return gameState;
+
+    gameState.isGameOver = true;
+
+    if (reason === 'time') {
+        if (gameState.score.team1 > gameState.score.team2) {
+            gameState.winner = 'team1';
+        } else if (gameState.score.team2 > gameState.score.team1) {
+            gameState.winner = 'team2';
+        } else {
+            gameState.winner = 'draw';
+        }
+    }
+
+    return gameState;
+}
+
+function gameLoop(gameState, onUpdate, onEnd, onGoalScored, onCountdownPause) {
+    if (gameState.isGameOver) return;
+
+    for (const player of Object.values(gameState.players)) {
+        if (player.headbuttCooldown > 0) player.headbuttCooldown--;
+        if (player.headbuttActive > 0) player.headbuttActive--;
+    }
+
+    let soundEvents = [];
+    if (!gameState.kickOff) {
+        Object.values(gameState.players).forEach(player => moveSnake(gameState, player));
+    }
+    const ballSoundEvents = updateBallPosition(gameState, (scorer) => {
+        if (!gameState.isPausedForGoal) {
+            handleGoal(gameState, scorer, onUpdate, onGoalScored, onCountdownPause);
+        }
+    });
+    const collisionSoundEvents = checkCollisions(gameState);
+    soundEvents = [...(ballSoundEvents || []), ...collisionSoundEvents];
+
+    onUpdate(gameState, soundEvents);
+}
+
+function moveSnake(gameState, player) {
+    const oldHead = { ...player.body[0] };
+    const head = { ...player.body[0] };
+    const speed = (player.headbuttActive > 0 ? HEADBUTT_SPEED_BOOST : SNAKE_SPEED) / 30;
+
+    let moved = true;
+    switch (player.direction) {
+        case 'up': head.y -= speed; break;
+        case 'down': head.y += speed; break;
+        case 'left': head.x -= speed; break;
+        case 'right': head.x += speed; break;
+        default: moved = false; break;
+    }
+
+    const goalYStart = (gameState.canvasHeight - gameState.goalHeight) / 2;
+    const goalYEnd = goalYStart + gameState.goalHeight;
+    const fieldX_start = (gameState.canvasWidth - gameState.fieldWidth) / 2;
+    const fieldX_end = fieldX_start + gameState.fieldWidth;
+
+    if (head.x < 0) head.x = 0;
+    if (head.x > gameState.canvasWidth - SNAKE_SIZE) head.x = gameState.canvasWidth - SNAKE_SIZE;
+    if (head.y < 0) head.y = 0;
+    if (head.y > gameState.canvasHeight - SNAKE_SIZE) head.y = gameState.canvasHeight - SNAKE_SIZE;
+
+    if (head.x < fieldX_start) {
+        if (head.y < goalYStart && oldHead.y >= goalYStart) {
+            head.y = goalYStart;
+        } else if (head.y < goalYStart && head.y + SNAKE_SIZE > goalYStart) {
+            head.y = goalYStart - SNAKE_SIZE;
+        } else if (head.y + SNAKE_SIZE > goalYEnd && head.y < goalYEnd && oldHead.y + SNAKE_SIZE <= goalYEnd) {
+            head.y = goalYEnd - SNAKE_SIZE;
+        } else if (head.y < goalYEnd && head.y + SNAKE_SIZE > goalYEnd) {
+            head.y = goalYEnd;
+        }
+    }
+
+    if (head.x + SNAKE_SIZE > fieldX_end) {
+        if (head.y < goalYStart && oldHead.y >= goalYStart) {
+            head.y = goalYStart;
+        } else if (head.y < goalYStart && head.y + SNAKE_SIZE > goalYStart) {
+            head.y = goalYStart - SNAKE_SIZE;
+        } else if (head.y + SNAKE_SIZE > goalYEnd && head.y < goalYEnd && oldHead.y + SNAKE_SIZE <= goalYEnd) {
+            head.y = goalYEnd - SNAKE_SIZE;
+        } else if (head.y < goalYEnd && head.y + SNAKE_SIZE > goalYEnd) {
+            head.y = goalYEnd;
+        }
+    }
+
+    player.isMoving = head.x !== oldHead.x || head.y !== oldHead.y;
+
+    if (moved) {
+        player.body.unshift(head);
+        if (player.body.length > player.length) {
+            player.body.pop();
+        }
+    }
+}
+
+function updateBallPosition(gameState, onGoal) {
+    const soundEvents = [];
+    if (gameState.kickOff) return soundEvents;
+    
+    const { ball } = gameState;
+    const dt = 1 / 30;
+
+    const currentSpeed = Math.hypot(ball.vx, ball.vy);
+    
+    const speedFactor = Math.min(currentSpeed / 300, 1);
+    const dynamicFriction = BALL_FRICTION - (1 - speedFactor) * 0.035;
+    
+    ball.vx *= dynamicFriction;
+    ball.vy *= dynamicFriction;
+    
+    if (currentSpeed < 10) {
+        ball.vx *= 0.85;
+        ball.vy *= 0.85;
+    }
+    
+    const currentSpin = Math.abs(ball.spin || 0);
+    const spinFactor = Math.min(currentSpin / MAX_SPIN, 1);
+    const dynamicSpinFriction = 0.98 - (1 - spinFactor) * 0.055;
+    
+    ball.spin = (ball.spin || 0) * dynamicSpinFriction;
+    ball.spin = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, ball.spin));
+    
+    if (ball.spin && Math.abs(ball.spin) > 0.1) {
+        if (currentSpeed > 300 && Math.abs(ball.spin) > 0.25) {
+            const perpX = -ball.vy;
+            const perpY = ball.vx;
+            const perpLength = Math.hypot(perpX, perpY) || 1;
+            
+            const magnusForce = ball.spin * MAGNUS_EFFECT_STRENGTH;
+            ball.vx += (perpX / perpLength) * magnusForce;
+            ball.vy += (perpY / perpLength) * magnusForce;
+        }
+    }
+    
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    const goalYStart = (gameState.canvasHeight - gameState.goalHeight) / 2;
+    const goalYEnd = goalYStart + gameState.goalHeight;
+
+    const fieldX_start = (gameState.canvasWidth - gameState.fieldWidth) / 2;
+    const fieldX_end = fieldX_start + gameState.fieldWidth;
+    const fieldY_start = (gameState.canvasHeight - gameState.fieldHeight) / 2;
+    const fieldY_end = fieldY_start + gameState.fieldHeight;
+
+    function reflectBall(nx, ny, energyLoss = BOUNCE_ENERGY_LOSS) {
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx = (ball.vx - 2 * dot * nx) * energyLoss;
+        ball.vy = (ball.vy - 2 * dot * ny) * energyLoss;
+        ball.spin *= energyLoss;
+        const tangentVel = ball.vx * (-ny) + ball.vy * nx;
+        if (Math.abs(tangentVel) > 200) {
+            ball.spin += tangentVel * 0.002;
+        }
+    }
+
+    function checkPointCollision(px, py) {
+        const dx = ball.x - px;
+        const dy = ball.y - py;
+        const dist = Math.hypot(dx, dy);
+        if (dist < ball.size) {
+            return { dist, nx: dx / dist, ny: dy / dist };
+        }
+        return null;
+    }
+
+    const corners = [
+        { x: fieldX_start, y: goalYStart },
+        { x: fieldX_start, y: goalYEnd },
+        { x: fieldX_end, y: goalYStart },
+        { x: fieldX_end, y: goalYEnd },
+    ];
+
+    for (const corner of corners) {
+        const collision = checkPointCollision(corner.x, corner.y);
+        if (collision) {
+            const maxVelocity = Math.max(Math.abs(ball.vx), Math.abs(ball.vy));
+            soundEvents.push({
+                type: 'hitPost',
+                isHardHit: maxVelocity > 200
+            });
+            
+            ball.x = corner.x + collision.nx * ball.size;
+            ball.y = corner.y + collision.ny * ball.size;
+            reflectBall(collision.nx, collision.ny);
+            return soundEvents;
+        }
+    }
+
+    if (ball.x < fieldX_start && ball.x > 0) {
+        if (ball.y + ball.size > goalYStart && ball.y < goalYStart && ball.vy > 0) {
+            ball.y = goalYStart - ball.size;
+            reflectBall(0, -1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        } else if (ball.y - ball.size < goalYStart && ball.y > goalYStart && ball.vy < 0) {
+            ball.y = goalYStart + ball.size;
+            reflectBall(0, 1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        } else if (ball.y - ball.size < goalYEnd && ball.y > goalYEnd && ball.vy < 0) {
+            ball.y = goalYEnd + ball.size;
+            reflectBall(0, 1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        } else if (ball.y + ball.size > goalYEnd && ball.y < goalYEnd && ball.vy > 0) {
+            ball.y = goalYEnd - ball.size;
+            reflectBall(0, -1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        }
+    }
+
+    if (ball.x > fieldX_end && ball.x < gameState.canvasWidth) {
+        if (ball.y + ball.size > goalYStart && ball.y < goalYStart && ball.vy > 0) {
+            ball.y = goalYStart - ball.size;
+            reflectBall(0, -1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        } else if (ball.y - ball.size < goalYStart && ball.y > goalYStart && ball.vy < 0) {
+            ball.y = goalYStart + ball.size;
+            reflectBall(0, 1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        } else if (ball.y - ball.size < goalYEnd && ball.y > goalYEnd && ball.vy < 0) {
+            ball.y = goalYEnd + ball.size;
+            reflectBall(0, 1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        } else if (ball.y + ball.size > goalYEnd && ball.y < goalYEnd && ball.vy > 0) {
+            ball.y = goalYEnd - ball.size;
+            reflectBall(0, -1, NET_ENERGY_ABSORPTION);
+            soundEvents.push({type: 'netHit'});
+        }
+    }
+
+    const ballInGoalZoneY = ball.y > goalYStart && ball.y < goalYEnd;
+
+    if (ball.x - ball.size < fieldX_start) {
+        if (ballInGoalZoneY) {
+            if (ball.x + ball.size < fieldX_start) {
+                onGoal('team2');
+            }
+            if (ball.x - ball.size < 0) {
+                soundEvents.push({type: 'netHit'});
+                ball.x = ball.size;
+                reflectBall(1, 0, NET_ENERGY_ABSORPTION);
+            }
+        } else {
+            ball.x = fieldX_start + ball.size;
+            soundEvents.push({ type: 'ballKick' });
+            reflectBall(1, 0);
+        }
+    }
+
+    if (ball.x + ball.size > fieldX_end) {
+        if (ballInGoalZoneY) {
+            if (ball.x - ball.size > fieldX_end) {
+                onGoal('team1');
+            }
+            if (ball.x + ball.size > gameState.canvasWidth) {
+                soundEvents.push({type: 'netHit'});
+                ball.x = gameState.canvasWidth - ball.size;
+                reflectBall(-1, 0, NET_ENERGY_ABSORPTION);
+            }
+        } else {
+            ball.x = fieldX_end - ball.size;
+            soundEvents.push({ type: 'ballKick' });
+            reflectBall(-1, 0);
+        }
+    }
+
+    if (ball.y - ball.size < fieldY_start) {
+        ball.y = fieldY_start + ball.size;
+        soundEvents.push({ type: 'ballKick' });
+        reflectBall(0, 1);
+    }
+
+    if (ball.y + ball.size > fieldY_end) {
+        ball.y = fieldY_end - ball.size;
+        soundEvents.push({ type: 'ballKick' });
+        reflectBall(0, -1);
+    }
+    
+    return soundEvents;
+}
+
+function checkCollisions(gameState) {
+    const soundEvents = [];
+    
+    for (const id in gameState.players) {
+        const player = gameState.players[id];
+        if (player.hitCooldown > 0) player.hitCooldown--;
+
+        const ball = gameState.ball;
+
+        for (const segment of player.body) {
+            const segmentCenterX = segment.x + SNAKE_SIZE / 2;
+            const segmentCenterY = segment.y + SNAKE_SIZE / 2;
+
+            const dist = Math.hypot(segmentCenterX - ball.x, segmentCenterY - ball.y);
+
+            if (dist < SNAKE_SIZE / 2 + ball.size && player.hitCooldown === 0) {
+                if (gameState.kickOff) gameState.kickOff = false;
+                player.hitCooldown = HIT_COOLDOWN_FRAMES;
+
+                handleBallTouch(gameState, player);
+
+                const isHead = player.body.indexOf(segment) === 0;
+                const isBoostKick = isHead && player.isMoving && player.headbuttActive > 0;
+                
+                soundEvents.push({ type: 'ballKick', isBoost: isBoostKick });
+
+                if (!player.isMoving || !isHead) {
+                    const normalX = ball.x - segmentCenterX;
+                    const normalY = ball.y - segmentCenterY;
+                    const norm = Math.hypot(normalX, normalY) || 1;
+                    const nx = normalX / norm;
+                    const ny = normalY / norm;
+
+                    const tx = -ny;
+                    const ty = nx;
+                    const tangentVel = ball.vx * tx + ball.vy * ty;
+                    ball.spin += tangentVel * 0.006;
+
+                    const dot = ball.vx * nx + ball.vy * ny;
+                    ball.vx = (ball.vx - 2 * dot * nx) * BOUNCE_ENERGY_LOSS;
+                    ball.vy = (ball.vy - 2 * dot * ny) * BOUNCE_ENERGY_LOSS;
+
+                    const overlap = (SNAKE_SIZE / 2 + ball.size) - dist;
+                    ball.x += nx * (overlap + 1);
+                    ball.y += ny * (overlap + 1);
+                } else {
+                    const angle = Math.atan2(ball.y - segmentCenterY, ball.x - segmentCenterX);
+                    const hitSpeed = player.headbuttActive > 0 ? HEADBUTT_BALL_HIT_SPEED : BALL_HIT_SPEED;
+
+                    const moveAngle = Math.atan2(
+                        player.direction === 'down' ? 1 : player.direction === 'up' ? -1 : 0,
+                        player.direction === 'right' ? 1 : player.direction === 'left' ? -1 : 0
+                    );
+                    const angleDiff = angle - moveAngle;
+                    ball.spin += Math.sin(angleDiff) * hitSpeed * 0.002;
+
+                    const hitVx = Math.cos(angle) * hitSpeed;
+                    const hitVy = Math.sin(angle) * hitSpeed;
+
+                    ball.vx += hitVx;
+                    ball.vy += hitVy;
+
+                    const currentSpeed = Math.hypot(ball.vx, ball.vy);
+                    const maxSpeed = HEADBUTT_BALL_HIT_SPEED * 1.5;
+                    if (currentSpeed > maxSpeed) {
+                        const ratio = maxSpeed / currentSpeed;
+                        ball.vx *= ratio;
+                        ball.vy *= ratio;
+                    }
+                }
+                break;
+            }
+        }
+    }
+    
+    return soundEvents;
+}
+
+function handleBallTouch(gameState, player) {
+    if (player && player.team) {
+        const teamTouches = gameState.lastTouchedBy[player.team];
+        if (teamTouches[0] !== player.id) {
+            teamTouches[1] = teamTouches[0];
+            teamTouches[0] = player.id;
+        }
+
+        if (gameState.playerMatchStats[player.id]) {
+            gameState.playerMatchStats[player.id].touches++;
+        }
+    }
+}
+
+function handleGoal(gameState, scoringTeam, onUpdate, onGoalScored, onCountdownPause) {
+    const [scorerPlayerId, assisterPlayerId] = gameState.lastTouchedBy[scoringTeam];
+
+    if (scorerPlayerId && gameState.playerMatchStats[scorerPlayerId]) {
+        gameState.playerMatchStats[scorerPlayerId].goals++;
+    }
+
+    if (assisterPlayerId && gameState.playerMatchStats[assisterPlayerId]) {
+        if (assisterPlayerId !== scorerPlayerId) {
+            gameState.playerMatchStats[assisterPlayerId].assists++;
+        }
+    }
+
+    if (scoringTeam === 'team1') {
+        gameState.score.team1++;
+    } else {
+        gameState.score.team2++;
+    }
+    gameState.goalScoredBy = scoringTeam;
+    gameState.goalScorerUsername = (scorerPlayerId && gameState.players[scorerPlayerId])
+        ? gameState.players[scorerPlayerId].username : null;
+    gameState.goalAssisterUsername = (assisterPlayerId && assisterPlayerId !== scorerPlayerId && gameState.players[assisterPlayerId])
+        ? gameState.players[assisterPlayerId].username : null;
+    gameState.isPausedForGoal = true;
+
+    onUpdate(gameState, [{ type: 'crowd' }]);
+
+    if (gameState.countdownActive && onCountdownPause) {
+        onCountdownPause({ action: 'pause' });
+    }
+
+    setTimeout(() => {
+        const savedScoringTeam = gameState.goalScoredBy;
+        resetBall(gameState);
+        gameState.goalScoredBy = savedScoringTeam;
+        onUpdate(gameState);
+
+        if (onGoalScored) {
+            onGoalScored(onCountdownPause);
+        }
+    }, 2000);
+}
+
+export function resetBall(gameState) {
+    gameState.goalScoredBy = null;
+    gameState.goalScorerUsername = null;
+    gameState.goalAssisterUsername = null;
+    gameState.kickOff = true;
+    gameState.lastTouchedBy = { team1: [null, null], team2: [null, null] };
+
+    const totalPlayers = Object.keys(gameState.players).length;
+    const snakeLength = Math.min(8, 24 / totalPlayers);
+
+    gameState.ball = {
+        x: gameState.canvasWidth / 2,
+        y: gameState.canvasHeight / 2,
+        size: BALL_SIZE,
+        vx: 0,
+        vy: 0,
+        spin: 0,
+    };
+
+    Object.values(gameState.players).forEach(player => {
+        const isTeam1 = gameState.teams.team1.includes(player.id);
+        const teamPlayers = isTeam1 ? gameState.teams.team1 : gameState.teams.team2;
+        const playerIndex = teamPlayers.indexOf(player.id);
+        const numPlayersOnTeam = teamPlayers.length;
+        const yPos = (gameState.canvasHeight / (numPlayersOnTeam + 1)) * (playerIndex + 1);
+
+        player.body = [{
+            x: isTeam1 ? 100 : gameState.canvasWidth - 100 - SNAKE_SIZE,
+            y: yPos
+        }];
+        player.direction = 'stop';
+        player.length = snakeLength;
+    });
+}
+
+export function spawnPlayer(gameState, playerId) {
+    const player = gameState.players[playerId];
+    if (!player) return;
+
+    const totalPlayers = Object.keys(gameState.players).length;
+    const snakeLength = Math.min(8, Math.max(1, Math.round(24 / totalPlayers)));
+
+    const isTeam1 = gameState.teams.team1.includes(playerId);
+    const teamPlayers = isTeam1 ? gameState.teams.team1 : gameState.teams.team2;
+    const playerIndex = teamPlayers.indexOf(playerId);
+    const numPlayersOnTeam = teamPlayers.length;
+    const yPos = (gameState.canvasHeight / (numPlayersOnTeam + 1)) * (playerIndex + 1);
+
+    player.body = [{
+        x: isTeam1 ? 100 : gameState.canvasWidth - 100 - SNAKE_SIZE,
+        y: yPos
+    }];
+    player.direction = 'stop';
+    player.length = snakeLength;
+}
+
+export function handleDirectionChange(gameState, playerId, direction) {
+    const player = gameState.players[playerId];
+    if (!player) return;
+
+    const newDir = direction;
+
+    if (newDir === player.direction && player.headbuttCooldown === 0) {
+        player.headbuttActive = HEADBUTT_DURATION_FRAMES;
+        player.headbuttCooldown = HEADBUTT_COOLDOWN;
+        return;
+    }
+
+    if ((player.direction === 'up' && newDir === 'down') ||
+        (player.direction === 'down' && newDir === 'up') ||
+        (player.direction === 'left' && newDir === 'right') ||
+        (player.direction === 'right' && newDir === 'left')) {
+        return;
+    }
+
+    player.direction = newDir;
+}
+
+export function resumeAfterKickoff(gameState) {
+    gameState.kickOff = false;
+    gameState.isPausedForGoal = false;
+    gameState.goalScoredBy = null;
+}
+
+export function serializeGameState(state) {
+    const players = {};
+    for (const [id, p] of Object.entries(state.players)) {
+        players[id] = {
+            id: p.id,
+            username: p.username,
+            color: p.color,
+            team: p.team,
+            body: p.body,
+            headbuttActive: p.headbuttActive > 0,
+        };
+    }
+    return {
+        players,
+        ball: state.ball ? { 
+            x: state.ball.x, 
+            y: state.ball.y, 
+            vx: state.ball.vx || 0, 
+            vy: state.ball.vy || 0, 
+            size: state.ball.size, 
+            spin: state.ball.spin || 0 
+        } : null,
+        score: state.score,
+        timeLeft: state.timeLeft,
+        kickOff: state.kickOff,
+        isPausedForGoal: state.isPausedForGoal,
+        goalScoredBy: state.goalScoredBy,
+        goalScorerUsername: state.goalScorerUsername,
+        goalAssisterUsername: state.goalAssisterUsername,
+        isGameOver: state.isGameOver,
+        winner: state.winner,
+        mode: state.mode,
+        teamNames: state.teamNames,
+        canvasWidth: state.canvasWidth,
+        canvasHeight: state.canvasHeight,
+        goalHeight: state.goalHeight,
+        fieldWidth: state.fieldWidth,
+        fieldHeight: state.fieldHeight,
+    };
+}

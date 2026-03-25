@@ -1,6 +1,11 @@
 const socket = io();
 
 const roomId = window.location.pathname.split('/')[2];
+
+// P2P State
+let p2pManager = null;
+let useP2P = false;
+let pingEl = null;
 const playersContainer = document.getElementById('playersContainer');
 const leaveRoomBtn = document.getElementById('leaveRoom');
 const readyBtn = document.getElementById('ready');
@@ -14,15 +19,34 @@ let teamNames = { team1: 'Equipo A', team2: 'Equipo B' };
 const username = window.currentUser?.username || 'Jugador';
 socket.emit('join-room', { roomId, username });
 
-socket.on('room-joined', (data) => {
+socket.on('room-joined', async (data) => {
     myPlayer = data.player;
     roomMode = data.room.mode;
     allPlayers = data.players;
+    useP2P = data.room.useP2P || false;
     if (data.room.teamNames) teamNames = data.room.teamNames;
     const texturePath = BALL_TEXTURE_MAP[data.room.ball] || '/img/ball-base-1.png';
     updateBallTexture(texturePath);
     setupLobbyUI();
     renderLobby(data.players, data.canStart);
+
+    // Initialize P2P if enabled
+    if (useP2P) {
+        try {
+            const { P2PManager } = await import('./webrtc/P2PManager.js');
+            p2pManager = new P2PManager(socket, roomId, {
+                duration: data.room.duration,
+                mode: data.room.mode,
+                teamNames: data.room.teamNames
+            });
+            p2pManager.initialize(data.players, socket.id);
+            setupP2PCallbacks();
+            console.log('[P2P] Manager initialized');
+        } catch (e) {
+            console.error('[P2P] Failed to initialize:', e);
+            useP2P = false;
+        }
+    }
 });
 
 socket.on('lobby-updated', (data) => {
@@ -31,6 +55,80 @@ socket.on('lobby-updated', (data) => {
     if (me) myPlayer = me;
     if (data.teamNames) teamNames = data.teamNames;
     renderLobby(data.players, data.canStart);
+
+    // Update P2P manager with new player list
+    if (p2pManager) {
+        p2pManager.updatePlayers(data.players);
+    }
+});
+
+// P2P game start - triggered when all players are ready in P2P mode
+socket.on('p2p-start-game', (data) => {
+    console.log('[P2P] Received p2p-start-game event', data);
+    if (!p2pManager) {
+        console.error('[P2P] No P2P manager available');
+        return;
+    }
+
+    // Clean up any existing game before starting new one
+    if (p2pManager.game) {
+        p2pManager.destroy();
+    }
+
+    // Update players and config
+    p2pManager.lobbyPlayers = data.players;
+    p2pManager.roomConfig = data.roomConfig;
+    
+    // Start the P2P game
+    p2pManager.startGame();
+});
+
+// P2P join active game - when a player joins a room with an active P2P game
+socket.on('p2p-join-active-game', async (data) => {
+    console.log('[P2P] Joining active game', data);
+    if (!p2pManager) {
+        console.error('[P2P] No P2P manager available');
+        return;
+    }
+
+    // Update players and config
+    p2pManager.lobbyPlayers = data.players;
+    p2pManager.roomConfig = data.roomConfig;
+    p2pManager.hostId = data.hostId;
+    
+    // Start as client to connect to the existing host
+    p2pManager._startAsClient();
+});
+
+// P2P player left - just remove their snake, game continues
+socket.on('p2p-player-left', ({ playerId }) => {
+    console.log(`[P2P] Player ${playerId} left`);
+    if (p2pManager && p2pManager.isHost && p2pManager.game) {
+        // Host removes the player from game state
+        p2pManager.game.removePlayer(playerId);
+    }
+});
+
+// P2P host changed - a client becomes the new host
+socket.on('p2p-host-changed', ({ newHostId, disconnectedPlayerId, players }) => {
+    console.log(`[P2P] Host changed to ${newHostId}, I am ${socket.id}`);
+    
+    if (!p2pManager) return;
+    
+    // Update players list
+    p2pManager.updatePlayers(players);
+    
+    if (newHostId === socket.id) {
+        // I am the new host - need to take over game logic
+        console.log('[P2P] I am now the host!');
+        p2pManager.becomeHost(disconnectedPlayerId);
+    } else {
+        // I'm still a client, just update my host reference
+        p2pManager.hostId = newHostId;
+        if (p2pManager.game) {
+            p2pManager.game.hostId = newHostId;
+        }
+    }
 });
 
 const countdownEl = document.getElementById('countdownOverlay');
@@ -180,6 +278,10 @@ socket.on('lobby-restored', (data) => {
     destroyJoystick();
     // Stop interpolated render loop
     if (window.gameRenderer) window.gameRenderer.stopRenderLoop();
+    // Clean up P2P game
+    if (p2pManager && p2pManager.game) {
+        p2pManager.destroy();
+    }
     allPlayers = data.players;
     const me = data.players.find(p => p.id === myPlayer?.id);
     if (me) myPlayer = me;
@@ -443,7 +545,12 @@ function initJoystick() {
     const DIRS = ['up', 'down', 'left', 'right'];
     DIRS.forEach(dir => {
         joystickManager.on(`dir:${dir}`, () => {
-            if (isGameActive) socket.emit('player-move', { roomId, direction: dir });
+            if (!isGameActive) return;
+            if (useP2P && p2pManager) {
+                p2pManager.handleInput(dir);
+            } else {
+                socket.emit('player-move', { roomId, direction: dir });
+            }
         });
     });
 }
@@ -469,7 +576,11 @@ document.addEventListener('keydown', (e) => {
     const dir = DIR_MAP[e.key.toLowerCase()];
     if (dir) {
         e.preventDefault();
-        socket.emit('player-move', { roomId, direction: dir });
+        if (useP2P && p2pManager) {
+            p2pManager.handleInput(dir);
+        } else {
+            socket.emit('player-move', { roomId, direction: dir });
+        }
     }
 });
 
@@ -477,7 +588,12 @@ const mobileDirBtns = { keyUp: 'up', keyDown: 'down', keyLeft: 'left', keyRight:
 for (const [id, dir] of Object.entries(mobileDirBtns)) {
     const btn = document.getElementById(id);
     if (btn) btn.addEventListener('click', () => {
-        if (isGameActive) socket.emit('player-move', { roomId, direction: dir });
+        if (!isGameActive) return;
+        if (useP2P && p2pManager) {
+            p2pManager.handleInput(dir);
+        } else {
+            socket.emit('player-move', { roomId, direction: dir });
+        }
     });
 }
 
@@ -529,4 +645,162 @@ if (fullscreenToggleBtn) {
 document.addEventListener('fullscreenchange', updateFullscreenIcon);
 document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
 document.addEventListener('msfullscreenchange', updateFullscreenIcon);
+
+// === P2P CALLBACKS SETUP ===
+function setupP2PCallbacks() {
+    if (!p2pManager) return;
+
+    pingEl = document.getElementById('ping');
+
+    p2pManager.onGameUpdate = (state) => {
+        console.log('[P2P UI] onGameUpdate called, ctx exists:', !!ctx, 'canvas:', !!canvas);
+        if (!ctx) {
+            console.log('[P2P UI] No ctx, skipping render');
+            return;
+        }
+        if (canvas.width !== state.canvasWidth) canvas.width = state.canvasWidth;
+        if (canvas.height !== state.canvasHeight) canvas.height = state.canvasHeight;
+
+        if (window.gameRenderer) {
+            window.gameRenderer.updateGameState(state);
+            window.gameRenderer.updateScoreboard(state);
+        } else {
+            renderGame(state);
+            updateScoreboard(state);
+        }
+
+        if (timerEl) {
+            if (state.timeLeft <= 10 && !state.isGameOver) {
+                timerEl.classList.add('timer-danger');
+            } else {
+                timerEl.classList.remove('timer-danger');
+            }
+        }
+    };
+
+    p2pManager.onSoundEvents = (events) => {
+        if (!window.SoundManager) return;
+        for (const event of events) {
+            switch (event.type) {
+                case 'ballKick':
+                    window.SoundManager.playBallKick(event.isBoost); break;
+                case 'hitPost':
+                    window.SoundManager.playHitPost(event.isHardHit); break;
+                case 'netHit':
+                    window.SoundManager.playNetHit(); break;
+                case 'countdown':
+                    window.SoundManager.playCountdown(event.isDramatic); break;
+                case 'whistle':
+                    window.SoundManager.playWhistle(); break;
+                case 'beep':
+                    window.SoundManager.playBeep(); break;
+                case 'crowd':
+                    window.SoundManager.playCrowd(); break;
+                case 'countdownControl':
+                    if (event.action === 'pause') {
+                        window.SoundManager.pauseCountdown();
+                    } else if (event.action === 'resume') {
+                        window.SoundManager.resumeCountdown();
+                    }
+                    break;
+            }
+        }
+    };
+
+    p2pManager.onKickoffCountdown = (count) => {
+        if (!countdownEl) return;
+        countdownEl.textContent = count > 0 ? count : 'GO!';
+        countdownEl.style.display = 'block';
+        clearTimeout(countdownHideTimer);
+        if (count === 0) {
+            countdownHideTimer = setTimeout(() => { countdownEl.style.display = 'none'; }, 700);
+        }
+    };
+
+    p2pManager.onGameOver = (data) => {
+        isGameActive = false;
+        destroyJoystick();
+        if (window.gameRenderer) window.gameRenderer.stopRenderLoop();
+        if (timerEl) timerEl.classList.remove('timer-danger');
+
+        const overlay = document.getElementById('gameOverlay');
+        const titleEl = document.getElementById('gameOverTitle');
+        const scoreEl = document.getElementById('gameOverScore');
+        const statsEl = document.getElementById('gameOverStats');
+        if (!overlay) return;
+
+        const tNames = data.teamNames || teamNames;
+        if (titleEl) {
+            if (data.winner === 'draw') {
+                titleEl.textContent = '¡EMPATE!';
+            } else {
+                const name = tNames[data.winner] || (data.winner === 'team1' ? 'Equipo A' : 'Equipo B');
+                titleEl.textContent = `¡GANA ${name.toUpperCase()}!`;
+            }
+        }
+        if (scoreEl) {
+            const t1 = tNames.team1 || 'Equipo A';
+            const t2 = tNames.team2 || 'Equipo B';
+            scoreEl.textContent = `${t1}  ${data.score.team1} — ${data.score.team2}  ${t2}`;
+        }
+
+        if (statsEl && data.playerMatchStats) {
+            const stats = Object.values(data.playerMatchStats)
+                .sort((a, b) => (b.goals - a.goals) || (b.assists - a.assists));
+            statsEl.innerHTML = `
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Jugador</th>
+                            <th title="Goles"><span class="stat-icon stat-icon-goal"> Goles</span></th>
+                            <th title="Asistencias"><span class="stat-icon stat-icon-assist"> Asistencias</span></th>
+                            <th title="Toques"><span class="stat-icon stat-icon-crosshair"> Toques</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stats.map(s => `
+                            <tr>
+                                <td>${s.username}</td>
+                                <td class="stat-value">${s.goals}</td>
+                                <td class="stat-value">${s.assists}</td>
+                                <td class="stat-value">${s.touches}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        overlay.style.display = 'flex';
+    };
+
+    p2pManager.onGameStarting = (data) => {
+        isGameActive = true;
+        if (canvas && data) {
+            canvas.width = data.canvasWidth;
+            canvas.height = data.canvasHeight;
+        }
+        const lobbyPanel = document.getElementById('lobbyPanel');
+        if (lobbyPanel) lobbyPanel.classList.remove('open');
+        const overlay = document.getElementById('overlay');
+        if (overlay) overlay.classList.remove('active');
+        initJoystick();
+        updateReadyButton();
+        if (window.gameRenderer) window.gameRenderer.startRenderLoop();
+    };
+
+    p2pManager.onLatencyUpdate = (latency) => {
+        if (pingEl) {
+            pingEl.textContent = `${latency}ms`;
+            // Color code based on latency
+            if (latency < 50) {
+                pingEl.style.color = '#2ecc40'; // Green
+            } else if (latency < 100) {
+                pingEl.style.color = '#ffdc00'; // Yellow
+            } else {
+                pingEl.style.color = '#ff4136'; // Red
+            }
+        }
+    };
+}
 

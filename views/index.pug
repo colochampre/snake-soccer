@@ -4,6 +4,7 @@ block lobby-panel
     div.lobby-wrapper.panel#lobbyPanel
         h2.lobby-title.text-center.flicker1 Lobby
         form.room-actions(method="POST" action="/room")
+            input#hostCountry(type="hidden" name="hostCountry" value="")
             div.room-options
                 label.private-room
                     span Priv

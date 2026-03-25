@@ -319,7 +319,20 @@ export function setupRoomSocket(io) {
             broadcastRoomList();
             console.log(`${player.username} se unió a la sala ${roomId} (${team || 'practica'})`);
 
-            if (room.gameState && !room.gameState.isGameOver) {
+            // If P2P game is already active, add player to existing game
+            if (room.useP2P && room.p2pGameActive) {
+                // Notify the new player to join the existing P2P game
+                socket.emit('p2p-join-active-game', {
+                    hostId: room.players[0]?.id,
+                    players: room.players,
+                    roomConfig: {
+                        duration: room.duration,
+                        mode: room.mode,
+                        teamNames: room.teamNames
+                    }
+                });
+            } else if (room.gameState && !room.gameState.isGameOver) {
+                // Server-side game active
                 const forcedTeam = room.mode !== 'practica' ? player.team : null;
                 addPlayer(room.gameState, player.id, player.username, forcedTeam, player.color);
                 spawnPlayer(room.gameState, player.id);
@@ -328,8 +341,34 @@ export function setupRoomSocket(io) {
                     canvasHeight: room.gameState.canvasHeight,
                     mode: room.gameState.mode,
                 });
-            } else if (canStart && !(room.gameState && !room.gameState.isGameOver)) {
-                launchGame(roomId, room, io);
+            } else if (canStart) {
+                // Start game - handle P2P mode
+                const startGame = () => {
+                    if (room.useP2P) {
+                        const hostId = room.players[0]?.id;
+                        if (hostId) {
+                            room.p2pGameActive = true;
+                            io.to(roomId).emit('p2p-start-game', {
+                                hostId,
+                                players: room.players,
+                                roomConfig: {
+                                    duration: room.duration,
+                                    mode: room.mode,
+                                    teamNames: room.teamNames
+                                }
+                            });
+                        }
+                    } else {
+                        launchGame(roomId, room, io);
+                    }
+                };
+
+                // In practice mode, add 1 second delay for auto-start
+                if (room.mode === 'practica') {
+                    setTimeout(startGame, 1000);
+                } else {
+                    startGame();
+                }
             }
         });
 
@@ -366,7 +405,24 @@ export function setupRoomSocket(io) {
             io.to(roomId).emit('lobby-updated', { players: room.players, canStart, teamNames: room.teamNames });
 
             if (canStart) {
-                launchGame(roomId, room, io);
+                if (room.useP2P) {
+                    // En modo P2P, notificar al host para que inicie el juego
+                    const hostId = room.players[0]?.id;
+                    if (hostId) {
+                        room.p2pGameActive = true;
+                        io.to(roomId).emit('p2p-start-game', {
+                            hostId,
+                            players: room.players,
+                            roomConfig: {
+                                duration: room.duration,
+                                mode: room.mode,
+                                teamNames: room.teamNames
+                            }
+                        });
+                    }
+                } else {
+                    launchGame(roomId, room, io);
+                }
             }
         });
 
@@ -375,11 +431,31 @@ export function setupRoomSocket(io) {
             if (room) {
                 const playerIndex = room.players.findIndex(p => p.id === socket.id);
                 if (playerIndex !== -1) {
+                    const wasHost = playerIndex === 0;
+                    
                     room.players.splice(playerIndex, 1);
                     roomController.updateRoomPlayers(roomId, room.players);
 
                     if (room.gameState && room.gameState.players[socket.id]) {
                         removePlayer(room.gameState, socket.id);
+                    }
+
+                    // In P2P mode during active game
+                    if (room.useP2P && room.p2pGameActive) {
+                        if (room.players.length === 0) {
+                            room.p2pGameActive = false;
+                        } else if (wasHost) {
+                            const newHostId = room.players[0]?.id;
+                            socket.to(roomId).emit('p2p-host-changed', {
+                                newHostId,
+                                disconnectedPlayerId: socket.id,
+                                players: room.players
+                            });
+                        } else {
+                            socket.to(roomId).emit('p2p-player-left', {
+                                playerId: socket.id
+                            });
+                        }
                     }
 
                     const canStart = canStartGame(room);
@@ -418,12 +494,38 @@ export function setupRoomSocket(io) {
                 if (room) {
                     const playerIndex = room.players.findIndex(p => p.id === socket.id);
                     if (playerIndex !== -1) {
+                        const wasHost = playerIndex === 0;
+                        
                         room.players.splice(playerIndex, 1);
                         roomController.updateRoomPlayers(roomId, room.players);
 
                         if (room.gameState && room.gameState.players[socket.id]) {
                             removePlayer(room.gameState, socket.id);
                         }
+
+                        // In P2P mode during active game
+                        if (room.useP2P && room.p2pGameActive) {
+                            if (room.players.length === 0) {
+                                // No players left, end the game
+                                room.p2pGameActive = false;
+                            } else if (wasHost) {
+                                // Host disconnected, transfer to next player
+                                const newHostId = room.players[0]?.id;
+                                io.to(roomId).emit('p2p-host-changed', {
+                                    newHostId,
+                                    disconnectedPlayerId: socket.id,
+                                    players: room.players
+                                });
+                            } else {
+                                // Client disconnected, just notify to remove their snake
+                                io.to(roomId).emit('p2p-player-left', {
+                                    playerId: socket.id
+                                });
+                            }
+                        }
+
+                        // Notify peers about disconnection for WebRTC cleanup
+                        io.to(roomId).emit('peer-disconnected', { peerId: socket.id });
 
                         const canStart = canStartGame(room);
                         io.to(roomId).emit('lobby-updated', { players: room.players, canStart, teamNames: room.teamNames });
@@ -477,6 +579,63 @@ export function setupRoomSocket(io) {
 
             const canStart = canStartGame(room);
             io.to(roomId).emit('lobby-updated', { players: room.players, canStart, teamNames: room.teamNames });
+        });
+
+        // === WebRTC Signaling for P2P ===
+        
+        // Client requests P2P connection to host
+        socket.on('rtc-request-connection', ({ roomId, hostId, username }) => {
+            console.log(`[WebRTC] ${username} requesting P2P connection to host ${hostId}`);
+            io.to(hostId).emit('rtc-request-connection', {
+                peerId: socket.id,
+                username
+            });
+        });
+
+        // Host sends offer to peer
+        socket.on('rtc-offer', ({ targetId, offer }) => {
+            io.to(targetId).emit('rtc-offer', {
+                fromId: socket.id,
+                offer
+            });
+        });
+
+        // Peer sends answer to host
+        socket.on('rtc-answer', ({ targetId, answer }) => {
+            io.to(targetId).emit('rtc-answer', {
+                fromId: socket.id,
+                answer
+            });
+        });
+
+        // ICE candidate exchange
+        socket.on('rtc-ice-candidate', ({ targetId, candidate }) => {
+            io.to(targetId).emit('rtc-ice-candidate', {
+                fromId: socket.id,
+                candidate
+            });
+        });
+
+        // P2P game over - save stats via server
+        socket.on('p2p-game-over', async ({ roomId, finalState }) => {
+            const room = roomController.getRoomData(roomId);
+            if (!room) return;
+            
+            // Mark P2P game as inactive
+            room.p2pGameActive = false;
+            
+            if (room.mode === 'practica') return;
+
+            // Reconstruct teams from room players
+            const teams = {
+                team1: room.players.filter(p => p.team === 'team1').map(p => p.id),
+                team2: room.players.filter(p => p.team === 'team2').map(p => p.id)
+            };
+
+            await saveMatchStats({
+                ...finalState,
+                teams
+            }, room);
         });
     });
 }
