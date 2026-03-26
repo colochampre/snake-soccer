@@ -31,7 +31,7 @@ async function loadUserStats() {
         }
         
         const stats = await response.json();
-        console.log('User stats loaded:', stats);
+        // console.log('User stats loaded:', stats);
         
         // Update stats display
         const statLevel = document.getElementById('statLevel');
