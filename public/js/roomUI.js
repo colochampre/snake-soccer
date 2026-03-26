@@ -42,6 +42,26 @@ socket.on('room-joined', async (data) => {
             p2pManager.initialize(data.players, socket.id);
             setupP2PCallbacks();
             console.log('[P2P] Manager initialized');
+
+            // If there's an active P2P game, join it immediately
+            if (data.p2pGameActive && data.hostId && data.hostId !== socket.id) {
+                console.log('[P2P] Joining active game immediately');
+                p2pManager.lobbyPlayers = data.players;
+                p2pManager.hostId = data.hostId;
+                
+                // Mark game as active and initialize UI
+                isGameActive = true;
+                const lobbyPanel = document.getElementById('lobbyPanel');
+                if (lobbyPanel) lobbyPanel.classList.remove('open');
+                const overlay = document.getElementById('overlay');
+                if (overlay) overlay.classList.remove('active');
+                initJoystick();
+                updateReadyButton();
+                if (window.gameRenderer) window.gameRenderer.startRenderLoop();
+                
+                // Start as client
+                p2pManager._startAsClient();
+            }
         } catch (e) {
             console.error('[P2P] Failed to initialize:', e);
             useP2P = false;
@@ -96,6 +116,16 @@ socket.on('p2p-join-active-game', async (data) => {
     p2pManager.roomConfig = data.roomConfig;
     p2pManager.hostId = data.hostId;
     
+    // Mark game as active and initialize UI
+    isGameActive = true;
+    const lobbyPanel = document.getElementById('lobbyPanel');
+    if (lobbyPanel) lobbyPanel.classList.remove('open');
+    const overlay = document.getElementById('overlay');
+    if (overlay) overlay.classList.remove('active');
+    initJoystick();
+    updateReadyButton();
+    if (window.gameRenderer) window.gameRenderer.startRenderLoop();
+    
     // Start as client to connect to the existing host
     p2pManager._startAsClient();
 });
@@ -109,26 +139,20 @@ socket.on('p2p-player-left', ({ playerId }) => {
     }
 });
 
-// P2P host changed - a client becomes the new host
-socket.on('p2p-host-changed', ({ newHostId, disconnectedPlayerId, players }) => {
-    console.log(`[P2P] Host changed to ${newHostId}, I am ${socket.id}`);
+// P2P room closed - host disconnected, room is deleted, redirect to error page
+socket.on('p2p-room-closed', ({ reason }) => {
+    console.log(`[P2P] Room closed: ${reason}`);
     
-    if (!p2pManager) return;
-    
-    // Update players list
-    p2pManager.updatePlayers(players);
-    
-    if (newHostId === socket.id) {
-        // I am the new host - need to take over game logic
-        console.log('[P2P] I am now the host!');
-        p2pManager.becomeHost(disconnectedPlayerId);
-    } else {
-        // I'm still a client, just update my host reference
-        p2pManager.hostId = newHostId;
-        if (p2pManager.game) {
-            p2pManager.game.hostId = newHostId;
-        }
+    // Clean up P2P
+    if (p2pManager) {
+        p2pManager.destroy();
     }
+    isGameActive = false;
+    destroyJoystick();
+    if (window.gameRenderer) window.gameRenderer.stopRenderLoop();
+    
+    // Redirect to room page with reason as query parameter
+    window.location.href = '/room/' + roomId + '?reason=' + encodeURIComponent(reason);
 });
 
 const countdownEl = document.getElementById('countdownOverlay');

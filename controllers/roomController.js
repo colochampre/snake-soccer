@@ -60,9 +60,10 @@ const roomController = {
             const { id } = req.params;
 
             if (!rooms.has(id)) {
+                const reason = req.query.reason;
                 return res.status(404).render('error', {
                     title: 'Sala no encontrada',
-                    message: 'La sala que buscas no existe o ha expirado.',
+                    message: reason || 'La sala que buscas no existe o ha expirado.',
                     error: { status: 404 }
                 });
             }

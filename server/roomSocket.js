@@ -313,7 +313,14 @@ export function setupRoomSocket(io) {
             roomController.updateRoomPlayers(roomId, room.players);
 
             const canStart = canStartGame(room);
-            socket.emit('room-joined', { player, players: room.players, room, canStart });
+            socket.emit('room-joined', { 
+                player, 
+                players: room.players, 
+                room, 
+                canStart,
+                p2pGameActive: room.useP2P && room.p2pGameActive,
+                hostId: room.players[0]?.id
+            });
             socket.to(roomId).emit('lobby-updated', { players: room.players, canStart, teamNames: room.teamNames });
 
             broadcastRoomList();
@@ -348,6 +355,7 @@ export function setupRoomSocket(io) {
                         const hostId = room.players[0]?.id;
                         if (hostId) {
                             room.p2pGameActive = true;
+                            room.p2pHostId = hostId; // Track the original host
                             io.to(roomId).emit('p2p-start-game', {
                                 hostId,
                                 players: room.players,
@@ -395,6 +403,21 @@ export function setupRoomSocket(io) {
             const room = roomController.getRoomData(roomId);
             if (!room) return;
 
+            // If P2P game is already active, don't allow ready toggle - just add player to game
+            if (room.useP2P && room.p2pGameActive) {
+                // Player is joining an active game, send them to join
+                socket.emit('p2p-join-active-game', {
+                    hostId: room.players[0]?.id,
+                    players: room.players,
+                    roomConfig: {
+                        duration: room.duration,
+                        mode: room.mode,
+                        teamNames: room.teamNames
+                    }
+                });
+                return;
+            }
+
             const player = room.players.find(p => p.id === socket.id);
             if (!player) return;
 
@@ -410,6 +433,7 @@ export function setupRoomSocket(io) {
                     const hostId = room.players[0]?.id;
                     if (hostId) {
                         room.p2pGameActive = true;
+                        room.p2pHostId = hostId; // Track the original host
                         io.to(roomId).emit('p2p-start-game', {
                             hostId,
                             players: room.players,
@@ -442,16 +466,22 @@ export function setupRoomSocket(io) {
 
                     // In P2P mode during active game
                     if (room.useP2P && room.p2pGameActive) {
-                        if (room.players.length === 0) {
+                        const wasP2PHost = socket.id === room.p2pHostId;
+                        if (wasP2PHost) {
+                            // Host left - close the room and kick all players
                             room.p2pGameActive = false;
-                        } else if (wasHost) {
-                            const newHostId = room.players[0]?.id;
-                            socket.to(roomId).emit('p2p-host-changed', {
-                                newHostId,
-                                disconnectedPlayerId: socket.id,
-                                players: room.players
+                            room.p2pHostId = null;
+                            socket.to(roomId).emit('p2p-room-closed', {
+                                reason: 'El host se ha desconectado. La sala ha sido cerrada.'
                             });
+                            // Clear all remaining players and delete room
+                            room.players = [];
+                            roomController.deleteRoom(roomId);
+                            broadcastRoomList();
+                            socket.leave(roomId);
+                            return; // Exit early, room is deleted
                         } else {
+                            // Client left, just notify host to remove their snake
                             socket.to(roomId).emit('p2p-player-left', {
                                 playerId: socket.id
                             });
@@ -505,19 +535,21 @@ export function setupRoomSocket(io) {
 
                         // In P2P mode during active game
                         if (room.useP2P && room.p2pGameActive) {
-                            if (room.players.length === 0) {
-                                // No players left, end the game
+                            const wasP2PHost = socket.id === room.p2pHostId;
+                            if (wasP2PHost) {
+                                // Host disconnected - close the room and kick all players
                                 room.p2pGameActive = false;
-                            } else if (wasHost) {
-                                // Host disconnected, transfer to next player
-                                const newHostId = room.players[0]?.id;
-                                io.to(roomId).emit('p2p-host-changed', {
-                                    newHostId,
-                                    disconnectedPlayerId: socket.id,
-                                    players: room.players
+                                room.p2pHostId = null;
+                                io.to(roomId).emit('p2p-room-closed', {
+                                    reason: 'El host se ha desconectado. La sala ha sido cerrada.'
                                 });
+                                // Clear all remaining players and delete room
+                                room.players = [];
+                                roomController.deleteRoom(roomId);
+                                broadcastRoomList();
+                                return; // Exit early, room is deleted
                             } else {
-                                // Client disconnected, just notify to remove their snake
+                                // Client disconnected, just notify host to remove their snake
                                 io.to(roomId).emit('p2p-player-left', {
                                     playerId: socket.id
                                 });
@@ -623,6 +655,7 @@ export function setupRoomSocket(io) {
             
             // Mark P2P game as inactive
             room.p2pGameActive = false;
+            room.p2pHostId = null;
             
             if (room.mode === 'practica') return;
 

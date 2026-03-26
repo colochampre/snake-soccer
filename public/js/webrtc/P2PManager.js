@@ -165,39 +165,4 @@ export class P2PManager {
             this.game = null;
         }
     }
-
-    // Called when this client becomes the new host after the previous host disconnected
-    becomeHost(disconnectedPlayerId) {
-        console.log('[P2P] Becoming host, taking over game state');
-        
-        // Get the current game state from the client game before destroying it
-        const currentState = this.game?.lastReceivedState;
-        
-        // Destroy the client game
-        if (this.game) {
-            this.game.destroy();
-            this.game = null;
-        }
-
-        this.isHost = true;
-        this.hostId = this.socket.id;
-
-        // Create a new HostGame with the existing state
-        this.game = new HostGame(
-            this.socket,
-            this.roomId,
-            this.roomConfig,
-            this.lobbyPlayers
-        );
-
-        // Wire up callbacks
-        this.game.onGameUpdate = (state) => this.onGameUpdate?.(state);
-        this.game.onSoundEvents = (events) => this.onSoundEvents?.(events);
-        this.game.onGameOver = (data) => this.onGameOver?.(data);
-        this.game.onKickoffCountdown = (count) => this.onKickoffCountdown?.(count);
-        this.game.onLatencyUpdate = (peerId, latency) => this.onLatencyUpdate?.(latency);
-
-        // Take over with existing game state
-        this.game.takeOverGame(currentState, disconnectedPlayerId);
-    }
 }
