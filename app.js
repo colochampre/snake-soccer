@@ -114,7 +114,11 @@ app.use(error.c404);
 setupRoomSocket(io);
 roomController.setIO(io);
 
-/*server.listen(port, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en http://localhost:${port}`);
-    console.log(`Acceso desde red local: http://<tu-ip-local>:${port}`);
-});*/
+server.listen(port, '0.0.0.0', () => {
+    if (isDevelopment) {
+        console.log(`Servidor corriendo en http://localhost:${port}`);
+        console.log(`Acceso desde red local: http://<tu-ip-local>:${port}`);
+    } else {
+        console.log(`Servidor corriendo en puerto ${port}`);
+    }
+});
